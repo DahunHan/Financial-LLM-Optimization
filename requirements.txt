@@ -1,0 +1,20 @@
+# PyTorch & CUDA
+torch
+torchvision
+torchaudio
+
+# Hugging Face Suite for LLMs
+transformers
+datasets
+accelerate
+
+# Quantization & PEFT Libraries
+bitsandbytes
+auto-gptq
+peft
+
+# Experiment Tracking & Utilities
+wandb
+tqdm
+scipy
+scikit-learn
