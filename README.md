@@ -66,6 +66,43 @@ This research can be reproduced using the following steps.
 
 **1. Environment Setup**
 ```bash
-# Create a new conda environment
-conda create -n finllm-sapling python=3.10
-conda activate finllm-sapling
+# Clone the repository
+git clone [https://github.com/DahunHan/Financial-LLM-Optimization.git](https://github.com/DahunHan/Financial-LLM-Optimization.git)
+cd Financial-LLM-Optimization
+
+# Create and activate the Python virtual environment
+python -m venv .venv
+source .venv/bin/activate # on Linux/macOS
+# .\.venv\Scripts\activate # on Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+```
+**2. API Keys**
+Create a .env file in the root directory and add your Hugging Face Hub token:
+
+```bash
+HUGGING_FACE_HUB_TOKEN="hf_..."
+```
+**3. Running Experiments**
+```bash
+# Run the data preprocessing script
+python preprocess_data.py
+
+# Run the training script
+python train_model.py
+```
+<br>
+
+## 6. Hardware Constraints & Setup Notes
+This research is conducted on a system with an NVIDIA RTX 3080 GPU with 10GB of VRAM. This hardware imposes significant constraints on the scale of model training and necessitates the use of memory-efficient techniques.
+
+VRAM Analysis for Llama-2-7B
+Full Fine-Tuning (16-bit): Impossible. A 7-billion parameter model requires approximately 14GB of VRAM (7B parameters * 2 bytes/parameter) just to load the model weights, before accounting for optimizer states and gradients. This exceeds the available 10GB.
+
+Standard LoRA (16-bit): Impossible. While LoRA reduces the number of trainable parameters, the full 16-bit base model must still be loaded into VRAM, which requires ~14GB.
+
+QLoRA (4-bit): Possible. QLoRA quantizes the base model's weights to 4-bit precision. The memory requirement for the base model is reduced to approximately 3.5GB (7B parameters * 0.5 bytes/parameter). This leaves enough VRAM to load the small LoRA adapters and optimizer states, making fine-tuning feasible on a 10GB GPU.
+
+Due to these physical hardware limitations, QLoRA is the foundational fine-tuning method used for all experiments in this project, including the baseline and the proposed SAPLING implementation.
