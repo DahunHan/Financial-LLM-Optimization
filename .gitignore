@@ -12,3 +12,7 @@ __pycache__/
 
 # Secret File
 .env
+
+# Ignore training output directories
+/results_4bit/
+/results_8bit/
