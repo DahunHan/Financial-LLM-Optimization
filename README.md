@@ -103,6 +103,8 @@ Full Fine-Tuning (16-bit): Impossible. A 7-billion parameter model requires appr
 
 Standard LoRA (16-bit): Impossible. While LoRA reduces the number of trainable parameters, the full 16-bit base model must still be loaded into VRAM, which requires ~14GB.
 
-QLoRA (4-bit): Possible. QLoRA quantizes the base model's weights to 4-bit precision. The memory requirement for the base model is reduced to approximately 3.5GB (7B parameters * 0.5 bytes/parameter). This leaves enough VRAM to load the small LoRA adapters and optimizer states, making fine-tuning feasible on a 10GB GPU.
+8-bit LoRA Fine-Tuning: Experimentally Confirmed as Impossible. An attempt to fine-tune the 7B model with 8-bit quantization resulted in a CUDA out of memory error. The ~7GB required to load the model weights, combined with the overhead for gradients and optimizer states, exceeds the 10GB VRAM limit during the initial training steps.
 
-Due to these physical hardware limitations, QLoRA is the foundational fine-tuning method used for all experiments in this project, including the baseline and the proposed SAPLING implementation.
+4-bit QLoRA Fine-Tuning: Experimentally Confirmed as Possible. By quantizing the base model's weights to 4-bit precision, the memory requirement for the base model is reduced to approximately 3.5GB. This provides sufficient headroom within the 10GB VRAM to accommodate the LoRA adapters and other training overhead, allowing for stable fine-tuning.
+
+Due to these experimentally verified hardware limitations, 4-bit QLoRA is the foundational fine-tuning method used for all experiments in this project.

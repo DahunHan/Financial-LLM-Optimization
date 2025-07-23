@@ -12,7 +12,7 @@ from transformers import (
     Trainer,
     DataCollatorForLanguageModeling,
 )
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from dotenv import load_dotenv
 
 ## 1. Load hugging face token
@@ -26,10 +26,15 @@ processed_data_path = "data/processed_train.json"
 
 ## 3. Load Model with 8-bit Quantization 
 ### You got this MY 3080
-print(f"Loading base model : {model_id} with 8-bit precision")
+print(f"Loading base model : {model_id} with 4-bit QLoRA precision")
 
-### 8-bit config.
-bnb_config = BitsAndBytesConfig(load_in_8bit=True,)
+### 4-bit config.
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+bnb_4bit_quant_type="nf4",
+bnb_4bit_compute_dtype=torch.float16,
+bnb_4bit_use_double_quant=True,
+)
 ### Download and load Llama 2 model from hub
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
@@ -42,6 +47,8 @@ model = AutoModelForCausalLM.from_pretrained(
 model.config.use_cache = False
 ### Compatibility Setting. Setting this to 1 tells the model we are NOT using tensor parallelism
 model.config.pretraining_tp=1
+### Preapre the model for k-bit training
+model = prepare_model_for_kbit_training(model)
 
 ## 4. Load Tokenizer
 ### Tokenizer is responsible for converting raw text into numbers(token) 
@@ -94,15 +101,16 @@ model = get_peft_model(model, lora_config)
 ### Let us hold all the hyperparametrs and settings for the training process.
 training_args = TrainingArguments(
     # Directory where the training outputs will be saved.
-    output_dir = "./results_8bit",
+    output_dir = "./results_4bit",
     # Total number of times the trainer (I) will iterate through the entire dataset
     num_train_epochs= 1,
     # Number of training samples to process in a single batch on one device
     # Set this to 1 to be conservative with my VRAM usage OTL
-    per_device_eval_batch_size=1,
+    per_device_train_batch_size=1,
     # A technique to simulate a larger batch size. Gradients are accumulated for this
     # many steps before a model update is performed
     gradient_accumulation_steps=1,
+    gradient_checkpointing=True,
     # Learning rate for the optimizer
     learning_rate=2e-4,
     # Use 16-bit floating bit point precision (mixed precision training)
@@ -145,6 +153,6 @@ trainer.train()
 print("Training Complete. I got a bit smarter")
 
 ## 10. Save
-final_model_path = "./results_8bit/final_model"
+final_model_path = "./results_4bit/final_model"
 trainer.save_model(final_model_path)
 print(f"Final model saved to {final_model_path}")
