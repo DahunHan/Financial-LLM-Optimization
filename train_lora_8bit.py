@@ -82,7 +82,6 @@ training_args = TrainingArguments(
     learning_rate=2e-4,
     fp16=True,
     logging_steps=10,
-    max_steps=50,
     save_steps=25,
     remove_unused_columns=False,
 )
