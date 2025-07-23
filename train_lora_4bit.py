@@ -118,9 +118,6 @@ training_args = TrainingArguments(
     fp16 = True,
     # How often to log training progress to console
     logging_steps=10,
-    # Initial test, we will only run a maximum of 50 training steps 
-    # to ensure the setup works.
-    max_steps=50,
     # Save a check point of the model every 25 steps
     save_steps=25,
     remove_unused_columns=False,
