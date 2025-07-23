@@ -90,21 +90,21 @@ HUGGING_FACE_HUB_TOKEN="hf_..."
 # Run the data preprocessing script
 python preprocess_data.py
 
-# Run the training script
-python train_model.py
+# 2. Run a training script (choose one)
+python train_qlora_4bit.py
+# OR
+python train_lora_8bit.py
 ```
 <br>
 
 ## 6. Hardware Constraints & Setup Notes
-This research is conducted on a system with an NVIDIA RTX 3080 GPU with 10GB of VRAM. This hardware imposes significant constraints on the scale of model training and necessitates the use of memory-efficient techniques.
+This research is conducted on a system with an NVIDIA RTX 3080 GPU with 10GB of VRAM. This hardware imposes significant constraints that directly inform the methodological choices of this study.
 
-VRAM Analysis for Llama-2-7B
-Full Fine-Tuning (16-bit): Impossible. A 7-billion parameter model requires approximately 14GB of VRAM (7B parameters * 2 bytes/parameter) just to load the model weights, before accounting for optimizer states and gradients. This exceeds the available 10GB.
+VRAM Analysis for Llama-2-7B (Experimental Results)
+Full Fine-Tuning (16-bit): Theoretically Impossible. A 7-billion parameter model requires approximately 14GB of VRAM (7B parameters * 2 bytes/parameter) just to load the model weights, before accounting for optimizer states and gradients. This exceeds the available 10GB.
 
-Standard LoRA (16-bit): Impossible. While LoRA reduces the number of trainable parameters, the full 16-bit base model must still be loaded into VRAM, which requires ~14GB.
+8-bit LoRA Fine-Tuning: Possible, but with a critical optimization. A standard 8-bit LoRA attempt initially failed with a CUDA out of memory error. However, by enabling Gradient Checkpointing, which trades a small amount of computation time for significant memory savings, the 8-bit fine-tuning was experimentally confirmed as possible on the 10GB GPU. This method is viable but noticeably slower than 4-bit QLoRA.
 
-8-bit LoRA Fine-Tuning: Experimentally Confirmed as Impossible. An attempt to fine-tune the 7B model with 8-bit quantization resulted in a CUDA out of memory error. The ~7GB required to load the model weights, combined with the overhead for gradients and optimizer states, exceeds the 10GB VRAM limit during the initial training steps.
+4-bit QLoRA Fine-Tuning: Experimentally Confirmed as the Most Efficient Method. By quantizing the base model's weights to 4-bit precision, the memory requirement for the base model is reduced to approximately 3.5GB. This provides sufficient headroom for a stable and significantly faster fine-tuning process compared to the 8-bit alternative.
 
-4-bit QLoRA Fine-Tuning: Experimentally Confirmed as Possible. By quantizing the base model's weights to 4-bit precision, the memory requirement for the base model is reduced to approximately 3.5GB. This provides sufficient headroom within the 10GB VRAM to accommodate the LoRA adapters and other training overhead, allowing for stable fine-tuning.
-
-Due to these experimentally verified hardware limitations, 4-bit QLoRA is the foundational fine-tuning method used for all experiments in this project.
+Due to these experimentally verified trade-offs, 4-bit QLoRA is the foundational and recommended fine-tuning method for this project, offering the best balance of speed and resource efficiency on the given hardware.
