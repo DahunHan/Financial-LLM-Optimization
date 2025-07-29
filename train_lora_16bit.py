@@ -53,6 +53,9 @@ tokenized_dataset = tokenized_dataset.remove_columns(["text"])
 print(f"Successfully loaded and tokenized {len(tokenized_dataset)} samples.")
 
 # --- 6. PEFT Configuration (LoRA) ---
+
+model.gradient_checkpointing_enable()
+
 lora_config = LoraConfig(
     lora_alpha=16,
     lora_dropout=0.1,
