@@ -72,17 +72,17 @@ model = get_peft_model(model, lora_config)
 
 # --- 5. Training Arguments ---
 training_args = TrainingArguments(
-    output_dir="./results_8bit",
-    num_train_epochs=1,
+    output_dir="./results_8bit/checkpoints",
+    num_train_epochs=10,
     per_device_train_batch_size=1,
     gradient_accumulation_steps=1,
     # --- ADDED: Enable gradient checkpointing ---
     # This will save a significant amount of memory during the training forward pass.
     gradient_checkpointing=True,
-    learning_rate=2e-4,
+    learning_rate=2e-5,
     fp16=True,
-    logging_steps=10,
-    save_steps=25,
+    logging_steps=500,
+    save_steps=5000,
     remove_unused_columns=False,
 )
 

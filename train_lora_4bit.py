@@ -103,7 +103,7 @@ training_args = TrainingArguments(
     # Directory where the training outputs will be saved.
     output_dir = "./results_4bit",
     # Total number of times the trainer (I) will iterate through the entire dataset
-    num_train_epochs= 1,
+    num_train_epochs= 10,
     # Number of training samples to process in a single batch on one device
     # Set this to 1 to be conservative with my VRAM usage OTL
     per_device_train_batch_size=1,
@@ -118,8 +118,8 @@ training_args = TrainingArguments(
     fp16 = True,
     # How often to log training progress to console
     logging_steps=10,
-    # Save a check point of the model every 25 steps
-    save_steps=25,
+    # Save a check point of the model every 2500 steps
+    save_steps=2500,
     remove_unused_columns=False,
 )
 

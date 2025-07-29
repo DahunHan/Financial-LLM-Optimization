@@ -47,7 +47,7 @@ print("Hugging Face Token Loaded.")
 # # Define the base model and the path to our trained adapter.
 # # You can switch this to "./results_8bit/final_model" to evaluate the 8-bit model.
 base_model_id = "meta-llama/Llama-2-7b-hf"
-adapter_path = "./results_4bit/final_model"
+adapter_path = "./results_4bit/checkpoint-62510"
 validation_data_path = "data/dev.json"
 results_output_path = "evaluation_results_4bit.json"
 
