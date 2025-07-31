@@ -23,6 +23,7 @@ print("Hugging Face Token Loaded.")
 # --- Model and Data Paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
 processed_data_path = "data/processed_train.json"
+validation_data_path = "data/processed_dev.json" 
 
 # --- 1. Load Model with 8-bit Quantization ---
 print(f"Loading base model: {model_id} with 8-bit precision.")
@@ -84,7 +85,7 @@ training_args = TrainingArguments(
     learning_rate=2e-5,
     fp16=True,
     logging_steps=500,
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
     save_strategy="epoch",
     remove_unused_columns=False,
 )

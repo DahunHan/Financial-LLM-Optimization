@@ -22,6 +22,7 @@ print("Hugging Face Token Loaded.")
 # --- 2. Model and Data Paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
 processed_data_path = "data/processed_train.json"
+validation_data_path = "data/processed_dev.json" 
 
 # --- 3. Load Model in 16-bit (FP16) Precision ---
 print(f"Loading base model: {model_id} in 16-bit (FP16) precision.")
@@ -77,7 +78,7 @@ training_args = TrainingArguments(
     learning_rate=2e-4,
     fp16=True, # Use fp16 for mixed-precision training
     logging_steps=500,
-    evaluation_strategy = "epoch",
+    eval_strategy = "epoch",
     save_strategy="epoch",
     remove_unused_columns=False,
 )
