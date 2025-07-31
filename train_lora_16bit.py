@@ -53,6 +53,9 @@ tokenized_dataset = tokenized_dataset.remove_columns(["text"])
 print(f"Successfully loaded and tokenized {len(tokenized_dataset)} samples.")
 
 # --- 6. PEFT Configuration (LoRA) ---
+
+model.gradient_checkpointing_enable()
+
 lora_config = LoraConfig(
     lora_alpha=16,
     lora_dropout=0.1,
@@ -65,14 +68,17 @@ model = get_peft_model(model, lora_config)
 # --- 7. Training Arguments ---
 training_args = TrainingArguments(
     output_dir="./results_16bit/checkpoints",
-    num_train_epochs=10,
+    run_name="16bit_15epoch_lr2e-5",
+    report_to="wandb",
+    num_train_epochs=15,
     per_device_train_batch_size=1, # Start with 1, can be increased on a 24GB GPU
     gradient_accumulation_steps=1,
     gradient_checkpointing=True, # Still useful for saving memory with activations
     learning_rate=2e-4,
     fp16=True, # Use fp16 for mixed-precision training
     logging_steps=500,
-    save_steps=10000,
+    evaluation_strategy = "epoch",
+    save_strategy="epoch",
     remove_unused_columns=False,
 )
 
@@ -89,7 +95,7 @@ trainer = Trainer(
 
 # --- 9. Start Training ---
 print("\nStarting 16-bit LoRA model training...")
-trainer.train()
+trainer.train(resume_from_checkpoint=True)
 print("Training complete!")
 
 # --- 10. Save the final model ---

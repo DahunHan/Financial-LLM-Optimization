@@ -101,9 +101,11 @@ model = get_peft_model(model, lora_config)
 ### Let us hold all the hyperparametrs and settings for the training process.
 training_args = TrainingArguments(
     # Directory where the training outputs will be saved.
-    output_dir = "./results_4bit",
+    output_dir = "./results_4bit/checkpoints",
+    run_name="4bit_15epoch_lr2e-5",
+    report_to="wandb",
     # Total number of times the trainer (I) will iterate through the entire dataset
-    num_train_epochs= 10,
+    num_train_epochs= 15,
     # Number of training samples to process in a single batch on one device
     # Set this to 1 to be conservative with my VRAM usage OTL
     per_device_train_batch_size=1,
@@ -112,14 +114,15 @@ training_args = TrainingArguments(
     gradient_accumulation_steps=1,
     gradient_checkpointing=True,
     # Learning rate for the optimizer
-    learning_rate=2e-4,
+    learning_rate=2e-5,
     # Use 16-bit floating bit point precision (mixed precision training)
     # This speeds up the training and reduces memory usage without sig. loss of accuracy.(Hopefully)
     fp16 = True,
     # How often to log training progress to console
-    logging_steps=10,
+    logging_steps=500,
     # Save a check point of the model every 2500 steps
-    save_steps=2500,
+    evaluation_strategy = "epoch",
+    save_strategy="epoch",
     remove_unused_columns=False,
 )
 
@@ -145,8 +148,7 @@ trainer = Trainer(
 
 ## 9. Start Training
 print("\nStarting model training")
-
-trainer.train()
+trainer.train(resume_from_checkpoint=True)
 print("Training Complete. I got a bit smarter")
 
 ## 10. Save

@@ -73,6 +73,8 @@ model = get_peft_model(model, lora_config)
 # --- 5. Training Arguments ---
 training_args = TrainingArguments(
     output_dir="./results_8bit/checkpoints",
+    run_name="8bit_10epoch_lr2e-5",
+    report_to="wandb",
     num_train_epochs=10,
     per_device_train_batch_size=1,
     gradient_accumulation_steps=1,
@@ -82,7 +84,8 @@ training_args = TrainingArguments(
     learning_rate=2e-5,
     fp16=True,
     logging_steps=500,
-    save_steps=5000,
+    evaluation_strategy="epoch",
+    save_strategy="epoch",
     remove_unused_columns=False,
 )
 
