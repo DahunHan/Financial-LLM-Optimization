@@ -1,17 +1,15 @@
 ###
-# train_lora_8bit_final_resume.py
+# train_full_ft.py: Full Fine-Tuning script for Llama-2-7B on A100
 import os
 import torch
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     TrainingArguments,
     Trainer,
     DataCollatorForLanguageModeling,
 )
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from dotenv import load_dotenv
 
 # --- 1. Load Hugging Face Token ---
@@ -24,62 +22,64 @@ model_id = "meta-llama/Llama-2-7b-hf"
 train_data_path = "data/processed_train.json"
 validation_data_path = "data/processed_dev.json"
 
-# --- 3. Load Model with 8-bit Quantization ---
-print(f"Loading base model: {model_id} with 8-bit precision.")
-bnb_config = BitsAndBytesConfig(
-    load_in_8bit=True,
-)
+# --- 3. Load Model for Full Fine-Tuning in BF16 Precision ---
+print(f"Loading base model: {model_id} for Full Fine-Tuning in BF16 precision.")
+# A100 GPUs support bfloat16 for more stable training
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    quantization_config=bnb_config,
+    torch_dtype=torch.bfloat16,
     device_map="auto",
     token=hf_token
 )
-model = prepare_model_for_kbit_training(model)
 
-# --- 4. Load Tokenizer ---
+# --- 4. Configure Model for Training ---
+# Disable cache for training, enable gradient checkpointing for memory efficiency
+model.config.use_cache = False
+model.gradient_checkpointing_enable()
+
+# --- 5. Load Tokenizer ---
 tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, token=hf_token)
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
 
-# --- 5. Load and Tokenize Datasets ---
+# --- 6. Load and Tokenize Datasets ---
 print(f"Loading and tokenizing datasets...")
 train_dataset = load_dataset("json", data_files=train_data_path, split="train")
 validation_dataset = load_dataset("json", data_files=validation_data_path, split="train")
 
 def tokenize_function(examples):
+    # Using a consistent max_length for all data splits
     return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
 
-tokenized_train_dataset = train_dataset.map(tokenize_function, batched=True).remove_columns(["text"])
-tokenized_validation_dataset = validation_dataset.map(tokenize_function, batched=True).remove_columns(["text"])
+tokenized_train_dataset = train_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
+tokenized_validation_dataset = validation_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
 print(f"Successfully loaded and tokenized datasets.")
 
-# --- 6. PEFT Configuration (LoRA) ---
-# We configure LoRA from scratch, the trainer will load the weights.
-lora_config = LoraConfig(
-    lora_alpha=16,
-    lora_dropout=0.1,
-    r=64,
-    bias="none",
-    task_type="CAUSAL_LM",
-)
-model = get_peft_model(model, lora_config)
-
-# --- 7. Training Arguments ---
+# --- 7. Training Arguments for Full Fine-Tuning ---
 training_args = TrainingArguments(
-    output_dir="./results_8bit/checkpoints",
-    run_name="8bit_15epoch_lr2e-5_resumed",
+    # Directories and Naming
+    output_dir="./results_full_ft/checkpoints",
+    run_name="full_ft_5epoch_lr2e-5",
     report_to="wandb",
-    num_train_epochs=15, # Set the final target number of epochs
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=1,
-    gradient_checkpointing=True,
+
+    # Training Hyperparameters
+    num_train_epochs=5, # As requested: 5 epochs
     learning_rate=2e-5,
-    fp16=True,
+    
+    # Memory Management for Full Fine-Tuning on A100
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8, # Effective batch size = 2 * 8 = 16
+    gradient_checkpointing=True,
+    bf16=True, # Use bfloat16 for stable training on Ampere GPUs
+
+    # Logging, Saving, and Evaluation
     logging_steps=100,
     eval_strategy="epoch",
     save_strategy="epoch",
-    remove_unused_columns=False,
+    save_total_limit=3, # Save only the last 3 checkpoints
+    load_best_model_at_end=True, # Load the best model based on eval_loss
+    metric_for_best_model="eval_loss",
+    greater_is_better=False,
 )
 
 # --- 8. Initialize Trainer ---
@@ -94,12 +94,11 @@ trainer = Trainer(
 )
 
 # --- 9. Start Training ---
-print("\nResuming training from the last checkpoint...")
-# ### FIX: Use the official and robust resume functionality ###
-trainer.train(resume_from_checkpoint=True)
+print("\nStarting Full Fine-Tuning...")
+trainer.train()
 print("Training complete!")
 
-# --- 10. Save the final model ---
-final_model_path = "./results_8bit/final_model"
+# --- 10. Save the final best model ---
+final_model_path = "./results_full_ft/final_model"
 trainer.save_model(final_model_path)
-print(f"Final model saved to {final_model_path}")
+print(f"Final best model saved to {final_model_path}")

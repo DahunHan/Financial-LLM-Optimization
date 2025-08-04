@@ -1,0 +1,15 @@
+  0%|                                                                          | 0/68761 [00:00<?, ?it/s]`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\autograd\_functions.py:185: UserWarning: MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization
+  warnings.warn(f"MatMul8bitLt: inputs will be cast from {A.dtype} to float16 during quantization")
+Traceback (most recent call last):
+  File "C:\Users\dahun\Financial-LLM-Optimization\train_lora_8bit.py", line 98, in <module>
+    trainer.train()
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\trainer.py", line 2237, in train
+    return inner_training_loop(
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\trainer.py", line 2644, in _inner_training_loop
+    self.optimizer.step()
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\accelerate\optimizer.py", line 166, in step
+    self.scaler.step(self.optimizer, closure)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\amp\grad_scaler.py", line 454, in step
+    len(optimizer_state["found_inf_per_device"]) > 0
+AssertionError: No inf checks were recorded for this optimizer.

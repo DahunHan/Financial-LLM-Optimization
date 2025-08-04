@@ -1,0 +1,99 @@
+  0%|                                                                          | 0/93765 [00:00<?, ?it/s]`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\autograd\_functions.py:185: UserWarning: MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization
+  warnings.warn(f"MatMul8bitLt: inputs will be cast from {A.dtype} to float16 during quantization")
+ 27%|████████████████▎                                            | 25033/93765 [00:34<03:40, 311.67it/s]Traceback (most recent call last):
+  File "C:\Users\dahun\Financial-LLM-Optimization\train_lora_8bit.py", line 99, in <module>
+    trainer.train(resume_from_checkpoint=True)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\trainer.py", line 2237, in train
+    return inner_training_loop(
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\trainer.py", line 2578, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\trainer.py", line 3792, in training_step
+    loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\trainer.py", line 3879, in compute_loss
+    outputs = model(**inputs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\accelerate\utils\operations.py", line 818, in forward
+    return model_forward(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\accelerate\utils\operations.py", line 806, in __call__
+    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\amp\autocast_mode.py", line 44, in decorate_autocast
+    return func(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\peft\peft_model.py", line 1845, in forward
+    return self.base_model(
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\peft\tuners\tuners_utils.py", line 216, in forward
+    return self.model.forward(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\utils\generic.py", line 961, in wrapper
+    output = func(self, *args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\models\llama\modeling_llama.py", line 460, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\utils\generic.py", line 1069, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\models\llama\modeling_llama.py", line 390, in forward
+    hidden_states = decoder_layer(
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\modeling_layers.py", line 93, in __call__
+    return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\_compile.py", line 51, in inner
+    return disable_fn(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\_dynamo\eval_frame.py", line 838, in _fn
+    return fn(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\utils\checkpoint.py", line 488, in checkpoint
+    return CheckpointFunction.apply(function, preserve, *args)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\autograd\function.py", line 575, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\utils\checkpoint.py", line 263, in forward
+    outputs = run_function(*args)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\models\llama\modeling_llama.py", line 289, in forward
+    hidden_states, _ = self.self_attn(
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\transformers\models\llama\modeling_llama.py", line 232, in forward
+    query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\peft\tuners\lora\bnb.py", line 227, in forward
+    result = self.base_layer(x, *args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\nn\modules\module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\nn\modules.py", line 1004, in forward
+    out = bnb.matmul(x, self.weight, bias=self.bias, state=self.state)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\autograd\_functions.py", line 369, in matmul
+    return MatMul8bitLt.apply(A, B, out, bias, state)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\autograd\function.py", line 575, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\autograd\_functions.py", line 196, in forward
+    CA, SCA, outlier_cols = F.int8_vectorwise_quant(A.to(torch.float16), threshold=state.threshold)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\functional.py", line 2245, in int8_vectorwise_quant
+    return torch.ops.bitsandbytes.int8_vectorwise_quant.default(A, threshold)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\_ops.py", line 756, in __call__
+    return self._op(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\_compile.py", line 51, in inner
+    return disable_fn(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\_dynamo\eval_frame.py", line 838, in _fn
+    return fn(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\torch\library.py", line 719, in func_no_dynamo
+    return func(*args, **kwargs)
+  File "C:\Users\dahun\Financial-LLM-Optimization\.venv\lib\site-packages\bitsandbytes\backends\cuda\ops.py", line 145, in _
+    outlier_cols = torch.argwhere(outliers.any(dim=0)).view(-1)
+KeyboardInterrupt
