@@ -27,8 +27,7 @@ print(f"Loading base model: {model_id} for Full Fine-Tuning in BF16 precision.")
 # A100 GPUs support bfloat16 for more stable training
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
+    torch_dtype=torch.float16,
     token=hf_token
 )
 
@@ -70,8 +69,11 @@ training_args = TrainingArguments(
     per_device_train_batch_size=2,
     gradient_accumulation_steps=8, # Effective batch size = 2 * 8 = 16
     gradient_checkpointing=True,
-    bf16=True, # Use bfloat16 for stable training on Ampere GPUs
+    fp16=True, # Use bfloat16 for stable training on Ampere GPUs
 
+    ## Disable dataloader multiprocessing
+    dataloader_num_workers=0,
+    
     # Logging, Saving, and Evaluation
     logging_steps=100,
     eval_strategy="epoch",
