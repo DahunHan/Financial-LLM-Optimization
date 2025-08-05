@@ -27,7 +27,7 @@ print(f"Loading base model: {model_id} for Full Fine-Tuning in BF16 precision.")
 # A100 GPUs support bfloat16 for more stable training
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    torch_dtype=torch.float16,
+    torch_dtype=torch.bfloat16,
     token=hf_token
 )
 
@@ -64,19 +64,22 @@ training_args = TrainingArguments(
     # Training Hyperparameters
     num_train_epochs=5, # As requested: 5 epochs
     learning_rate=2e-5,
-    
+    # Memory efficient 8-bit optimizer
+    optim="adamw_bnb_8bit",
     # Memory Management for Full Fine-Tuning on A100
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=8, # Effective batch size = 2 * 8 = 16
+    per_device_train_batch_size=1,
+    per_device_eval_batch_size=1,
+    gradient_accumulation_steps=16, # Effective batch size = 1 * 16 = 16
     gradient_checkpointing=True,
-    fp16=True, # Use bfloat16 for stable training on Ampere GPUs
+    gradient_checkpointing_kwargs={'use_reentrant':False},
+    bf16=True, # Use bfloat16 for stable training on Ampere GPUs
 
     ## Disable dataloader multiprocessing
     dataloader_num_workers=0,
     
     # Logging, Saving, and Evaluation
     logging_steps=100,
-    eval_strategy="epoch",
+    evaluation_strategy="epoch",
     save_strategy="epoch",
     save_total_limit=3, # Save only the last 3 checkpoints
     load_best_model_at_end=True, # Load the best model based on eval_loss
