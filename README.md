@@ -70,7 +70,7 @@ We will conduct a systematic, multi-phase experimental process to test our hypot
 | :---------------------- | :-----------: | :----------: | :----------------: | :---------------: |
 | **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | ~28 GB             | A100              |
 | **LoRA** | 16-bit (FP16) | 1.47%        | ~28 GB + Adapter   | A100              |
-| **LoRA** | 8-bit         | TBD          | ~14 GB + Adapter   | A100              |
+| **LoRA** | 8-bit         | 0.91%          | ~14 GB + Adapter   | A100              |
 | **QLoRA** | 4-bit         | 1.02%        | ~7 GB + Adapter    | RTX 3080          |
 | **SAPLING (50% Drop)** | 16-bit        | TBD          | TBD                | A100              |
 
