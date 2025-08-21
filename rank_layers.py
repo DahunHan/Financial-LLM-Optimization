@@ -118,7 +118,7 @@ for name, param in model.named_parameters():
         # The layer index is extracted from the parameter name
         # i.e. "base_model.model.model.layers.15.self_....." -> 15
         try :
-            layer_index = int(name.split('.')[3])
+            layer_index = int(name.split('.')[4])
         except (ValueError, IndexError):
             continue # Skip if the name format is unexpected.
         # The importance score is the L2 Norm of the weight matrix.
