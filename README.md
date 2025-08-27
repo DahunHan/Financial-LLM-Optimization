@@ -1,135 +1,126 @@
-## Financial LLM Optimization via Structural Compression
+# Financial LLM Optimization via Structural Compression
+
 A research project on enhancing the efficiency and accuracy of Large Language Models (LLMs) for the financial domain. This project systematically evaluates structural compression as a superior alternative to conventional methods for optimizing models on general-purpose hardware.
 
 <br>
 
-### 1. Project Goal & Core Hypothesis
-The goal of this research is to identify and validate the most effective optimization strategies for LLMs in the specialized financial domain. We aim to maximize practical inference efficiency (i.e., speed and memory usage) on consumer-grade and cloud hardware, while maintaining the high level of accuracy required for complex financial tasks.
+## 1. Project Goal & Core Hypothesis
+
+The goal of this research is to identify and validate the most effective optimization strategies for LLMs in the specialized financial domain. We aim to maximize **practical inference efficiency** (i.e., speed and memory usage) on **consumer-grade and cloud hardware**, while maintaining the **high level of accuracy** required for complex financial tasks.
 
 Our core hypothesis is as follows:
 
-    The financial domain demands exceptional accuracy from LLMs. Conventional compression techniques like Quantization can be detrimental, as they uniformly degrade model parameters, potentially compromising the critical, complex reasoning capabilities essential in finance. In contrast, we hypothesize that Structural Compression methods, such as Layer Dropping, will achieve a superior trade-off. By selectively removing entire layers (knowledge modules) deemed less relevant to the financial domain, this approach can secure significant, hardware-agnostic efficiency gains while better preserving the model's core reasoning accuracy.
+> The financial domain demands exceptional accuracy from LLMs. Conventional compression techniques like **Quantization** can be detrimental, as they uniformly degrade model parameters, potentially compromising the critical, complex reasoning capabilities essential in finance. In contrast, we hypothesize that **Structural Compression** methods, such as **Layer Dropping**, will achieve a superior trade-off. By selectively removing entire layers (knowledge modules) deemed less relevant to the financial domain, this approach can secure significant, hardware-agnostic efficiency gains while better preserving the model's core reasoning accuracy.
 
 <br>
 
-### 2. Methodology
-To validate our hypothesis, this research will implement and compare the following methodologies using Llama-2-7B on the FinQA dataset.
+## 2. Methodology
+
+To validate our hypothesis, this research will implement and compare the following methodologies using `Llama-2-7B` on the `FinQA` dataset.
 
 * **Proposed Method: SAPLING (Structural Compression)**
-
-    * Description: A framework that performs domain-specific adaptation and compression simultaneously. Its core technique is Successive Layer Dropping, which progressively reduces the model's depth.
-
-    * Role: The novel, efficient optimization technique whose performance-efficiency trade-off is the subject of this study.
+    * **Description:** A framework that performs domain-specific adaptation and compression simultaneously using Layer Dropping. We will investigate two distinct pruning strategies.
+    * **Role:** The novel, efficient optimization technique whose performance-efficiency trade-off is the subject of this study.
 
 * **Baseline 1: Full Fine-Tuning (Performance Ceiling)**
-
-    * Description: A standard fine-tuning approach where all model parameters are updated.
-
-    * Role: To establish the theoretical maximum performance achievable on the FinQA dataset, serving as the gold-standard accuracy benchmark against which all other methods are measured.
+    * **Description:** A standard fine-tuning approach where all model parameters are updated.
+    * **Role:** To establish the **theoretical maximum performance** achievable on the FinQA dataset, serving as the gold-standard accuracy benchmark.
 
 * **Baseline 2: LoRA & QLoRA (Efficiency Baselines)**
-
-    * Description: Parameter-Efficient Fine-Tuning (PEFT) methods that update only a small subset of parameters (LoRA) or operate on a quantized base model (QLoRA).
-
-    * Role: To represent the current industry standard for efficient fine-tuning. SAPLING's performance will be compared against these baselines to demonstrate its relative advantages.
+    * **Description:** Parameter-Efficient Fine-Tuning (PEFT) methods that update only a small subset of parameters (LoRA) or operate on a quantized base model (QLoRA).
+    * **Role:** To represent the **current industry standard for efficient fine-tuning**.
 
 <br>
 
-### 3. Experimental Plan
-We will conduct a systematic, multi-phase experimental process to test our hypothesis.
+## 3. Experimental Plan
 
 * **Phase 1: Establish Performance Baselines**
-
-    * Objective: To fine-tune the Llama-2-7B model using various standard methods to create a comprehensive set of performance and efficiency benchmarks.
-
-    * Experiments:
-
-        1. Full Fine-Tuning (16-bit, on A100 GPU): Establish the performance ceiling.
-
-        2. LoRA Fine-Tuning (16-bit, on A100 GPU): Establish a high-quality efficiency baseline.
-
-        3. LoRA Fine-Tuning (8-bit, on RTX 3080/A100): Measure performance under moderate memory constraints.
-
-        4. QLoRA Fine-Tuning (4-bit, on RTX 3080): Measure performance under severe memory constraints.
-
-    * Key Metrics: QA Accuracy (%), Max VRAM Usage (GB), Total Training Time, eval_loss curve.
+    * **Objective:** To fine-tune the Llama-2-7B model using various standard methods to create a comprehensive set of performance and efficiency benchmarks.
+    * **Experiments:**
+        1.  Full Fine-Tuning (16-bit)
+        2.  LoRA Fine-Tuning (16-bit)
+        3.  LoRA Fine-Tuning (8-bit)
+        4.  QLoRA Fine-Tuning (4-bit)
 
 * **Phase 2: Evaluate Proposed Method (SAPLING)**
-
-    * Objective: To implement and apply the SAPLING framework and rigorously compare its performance against the established baselines.
-
-    * Key Metrics: A Pareto frontier graph of Model Size (%) vs. Accuracy (%), and the final inference throughput (tokens/sec) to visualize the trade-offs.
-
-<br>
-
-### 4. Results
-
-*This section will be updated as the experiments are completed.*
-
-| Method                  | Precision     | Accuracy (%) | Model Size (GB)    | Training Hardware |
-| :---------------------- | :-----------: | :----------: | :----------------: | :---------------: |
-| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | ~28 GB             | A100              |
-| **LoRA** | 16-bit (FP16) | 1.47%        | ~28 GB + Adapter   | A100              |
-| **LoRA** | 8-bit         | 0.91%          | ~14 GB + Adapter   | A100              |
-| **QLoRA** | 4-bit         | 1.02%        | ~7 GB + Adapter    | RTX 3080          |
-| **SAPLING (50% Drop)** | 16-bit        | TBD          | TBD                | A100              |
-
+    * **Objective:** To implement and apply the Layer Dropping framework using two different strategies and compare their performance against the baselines.
+    * **Step 1 - Diagnosis (Shared):** Train LoRA adapters on all layers for 1 epoch to rank layer importance.
+    * **Step 2 - Pruning Strategy A (Batched Dropping):** Prune the N least important layers at once (for N = 4, 8, 12, 16) and then fine-tune the resulting smaller model to recover performance.
+    * **Step 3 - Pruning Strategy B (Successive Dropping):** Iteratively train for 1 epoch and then prune the single least important layer. This process is repeated, with early stopping implemented to halt the process if performance degrades.
 
 <br>
 
-### 5. Setup & How to Run
+## 4. Final Results
+
+This table summarizes the final accuracy of all baseline and proposed models on the FinQA dataset. The results for Successive Dropping will be added upon completion.
+
+| Method | Precision | Accuracy (%) | Model Size (Layers) | Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | 32/32 (100%) | Performance Ceiling |
+| **LoRA** | 16-bit (FP16) | 1.47% | 32/32 (100%) | High-quality Efficiency Baseline |
+| **QLoRA** | 4-bit | 1.02% | 32/32 (100%) | Best Quantization Baseline |
+| **LoRA** | 8-bit | 0.91% | 32/32 (100%) | Mid-quality Efficiency Baseline |
+| **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68% | 28/32 (87.5%) | 12.5% Model Size Reduction |
+| **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45% | 24/32 (75%) | 25% Model Size Reduction |
+| **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57% | 20/32 (62.5%) | 37.5% Model Size Reduction |
+| **SAPLING (Batched, -16L)** | 16-bit (BF16) | 0.23% | 16/32 (50%) | 50% Model Size Reduction |
+| **SAPLING (Successive)** | 16-bit (BF16) | TBD | TBD | Compares gradual vs. batched |
+
+<br>
+
+## 5. Setup & How to Run
+
 This research can be reproduced using the following steps.
 
-#### 1. Environment Setup
-```
+**1. Environment Setup**
+
+```bash
 # Clone the repository
 git clone [https://github.com/DahunHan/Financial-LLM-Optimization.git](https://github.com/DahunHan/Financial-LLM-Optimization.git)
 cd Financial-LLM-Optimization
 
-# Create and activate the Python virtual environment
-# Note: This project requires Python 3.10 for library compatibility.
+# Create and activate the Python virtual environment (Python 3.10 required)
 python3.10 -m venv .venv
 source .venv/bin/activate # on Linux/macOS
 # .\.venv\Scripts\activate # on Windows
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies from the final, stable requirements file
+pip install -r requirements.txt --extra-index-url [https://download.pytorch.org/whl/cu121](https://download.pytorch.org/whl/cu121)
 ```
-#### 2. API Keys & Wandb
-Create a .env file in the root directory and add your Hugging Face Hub token. Log in to Weights & Biases for experiment tracking.
-```
-# .env file content
-HUGGING_FACE_HUB_TOKEN="hf_..."
 
-# Terminal command
+**2. API Keys & Wandb**
+```bash
+# Create a .env file and add your Hugging Face Hub token
+echo "HUGGING_FACE_HUB_TOKEN=hf_..." > .env
+
+# Log in to Weights & Biases (optional)
 wandb login
 ```
-#### 3. Running Experiments
+**3. Running Experiments**
+```bash
+# 1. Preprocess data (if not already done)
+python3.10 preprocess_data.py
+
+# 2. Run SAPLING Diagnosis (Required for all pruning)
+python3.10 rank_layers.py
+
+# 3. Run SAPLING Pruning (Choose one strategy)
+# Strategy A: Batched Dropping
+python3.10 prune_and_finetune.py --num_layers_to_drop 4
+
+# Strategy B: Successive Dropping
+python3.10 successive_pruning.py
 ```
-# 1. Run the data preprocessing script first (if needed)
-python preprocess_data.py
+## 6. Hardware Analysis & Environment Notes
 
-# 2. Run a training script (choose one)
-python train_full_ft.py        # For Full Fine-Tuning (requires A100+)
-python train_lora_16bit.py     # For 16-bit LoRA (requires A100+)
-python train_lora_8bit.py      # For 8-bit LoRA
-python train_qlora_4bit.py     # For 4-bit QLoRA
-```
-<br>
+Local Machine: NVIDIA RTX 3080 (10GB VRAM)
 
-### 6. Hardware Analysis & Environment Notes
-This research is conducted across two hardware setups, which directly informs the project's methodology.
+Cloud Instance: Lambda Labs A100 (40GB VRAM)
 
-* Local Machine: NVIDIA RTX 3080 (10GB VRAM)
+VRAM Analysis for Llama-2-7B (Experimental Results):
 
-* Cloud Instance: Lambda Labs A100 (40GB VRAM)
+Full Fine-Tuning (16-bit): Impossible on RTX 3080. Requires ~28GB+ VRAM, necessitating cloud GPUs like the A100.
 
-#### **VRAM Analysis for Llama-2-7B (Experimental Results):**
-
-    * Full Fine-Tuning (16-bit): Impossible on RTX 3080. Requires ~28GB VRAM just to load the model and optimizer states, far exceeding the available 10GB. This experiment is exclusively run on the A100 GPU.
-
-    * 8-bit LoRA Fine-Tuning: Possible but slow on RTX 3080. This is only achievable by enabling Gradient Checkpointing, which trades computation time for memory.
-
-    * 4-bit QLoRA Fine-Tuning: Most efficient method for local fine-tuning. Quantizing the base model to 4-bit reduces its memory footprint to ~3.5GB, providing sufficient headroom for a stable and fast training process on the RTX 3080.
+4-bit QLoRA Fine-Tuning: Most efficient method for local fine-tuning. The quantized base model fits comfortably within 10GB VRAM.
 
 These experimentally verified trade-offs are central to the project, highlighting the need for advanced compression techniques like SAPLING to enable high-performance model training on more accessible hardware.
