@@ -52,19 +52,19 @@ To validate our hypothesis, this research will implement and compare the followi
 
 ## 4. Final Results
 
-This table summarizes the final accuracy of all baseline and proposed models on the FinQA dataset. The results for Successive Dropping will be added upon completion.
+This table summarizes the final accuracy of all baseline and proposed models on the FinQA dataset, sorted by performance. The "Compression Rate" indicates the percentage of layers remaining, while "Performance Retention" measures the accuracy relative to the Full Fine-Tuning baseline.
 
-| Method                          | Precision     | Accuracy (%) | Model Size (Layers) | Notes                               |
-| :------------------------------ | :-----------: | :----------: | :-----------------: | :---------------------------------- |
-| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | 32/32 (100%)        | Performance Ceiling                 |
-| **LoRA** | 16-bit (FP16) | 1.47%        | 32/32 (100%)        | High-quality Efficiency Baseline    |
-| **QLoRA** | 4-bit         | 1.02%        | 32/32 (100%)        | Best Quantization Baseline          |
-| **LoRA** | 8-bit         | 0.91%        | 32/32 (100%)        | Mid-quality Efficiency Baseline     |
-| **SAPLING (Successive, -5L)** | 16-bit (BF16) | **1.13%** | 27/32 (84.4%)       | **Optimal Sweet Spot Found** |
-| **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68%        | 28/32 (87.5%)       | 12.5% Model Size Reduction          |
-| **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57%        | 20/32 (62.5%)       | 37.5% Model Size Reduction          |
-| **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45%        | 24/32 (75%)         | 25% Model Size Reduction            |
-| **SAPLING (Batched, -16L)** | 16-bit (BF16) | 0.23%        | 16/32 (50%)         | 50% Model Size Reduction            |
+| Method                          | Precision     | Accuracy (%) | Compression (Layers) | Performance Retention |
+| :------------------------------ | :-----------: | :----------: | :------------------: | :-------------------: |
+| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | 100% (32/32)         | **100%** |
+| **LoRA (16-bit)** | 16-bit (FP16) | 1.47%        | 100% (32/32)         | 92.5%                 |
+| **SAPLING (Successive, -5L)** | 16-bit (BF16) | **1.13%** | 84.4% (27/32)        | **71.1%** |
+| **QLoRA (4-bit)** | 4-bit         | 1.02%        | 100% (32/32)         | 64.2%                 |
+| **LoRA (8-bit)** | 8-bit         | 0.91%        | 100% (32/32)         | 57.2%                 |
+| **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68%        | 87.5% (28/32)        | 42.8%                 |
+| **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57%        | 62.5% (20/32)        | 35.8%                 |
+| **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45%        | 75.0% (24/32)        | 28.3%                 |
+| **SAPLING (Batched, -16L)** | 16-bit (BF16) | 0.23%        | 50.0% (16/32)        | 14.5%                 |         |
 
 <br>
 
@@ -111,16 +111,13 @@ python3.10 prune_and_finetune.py --num_layers_to_drop 4
 # Strategy B: Successive Dropping
 python3.10 successive_pruning.py
 ```
-## 6. Hardware Analysis & Environment Notes
 
-Local Machine: NVIDIA RTX 3080 (10GB VRAM)
+## 6. Key Findings & Limitations
 
-Cloud Instance: Lambda Labs A100 (40GB VRAM)
+This research has yielded several key insights into the challenges of fine-tuning and compressing Large Language Models for specialized, high-complexity domains like finance.
 
-VRAM Analysis for Llama-2-7B (Experimental Results):
+* **Rapid Overfitting due to Data/Model Mismatch:** The primary limitation of this study was the significant mismatch between the model's capacity and the dataset's size. The Llama-2-7B model, with its 7 billion parameters, possesses an immense capacity for memorization. When fine-tuned on the relatively small FinQA dataset (~6,600 training samples), the model exhibited severe and rapid overfitting, often within a single epoch. This was observed across all fine-tuning methods, including Full Fine-Tuning, LoRA, and both SAPLING strategies.
 
-Full Fine-Tuning (16-bit): Impossible on RTX 3080. Requires ~28GB+ VRAM, necessitating cloud GPUs like the A100.
+* **Distributed Nature of Financial Reasoning:** The layer importance ranking revealed that all 32 layers of the Llama-2-7B model have very similar, non-trivial importance scores for the FinQA task. This suggests that the complex, multi-step logical and numerical reasoning required for financial question-answering is not localized in a few specific layers. Instead, it appears to be a function distributed across the entire depth of the model.
 
-4-bit QLoRA Fine-Tuning: Most efficient method for local fine-tuning. The quantized base model fits comfortably within 10GB VRAM.
-
-These experimentally verified trade-offs are central to the project, highlighting the need for advanced compression techniques like SAPLING to enable high-performance model training on more accessible hardware.
+* **Ineffectiveness of Structural Pruning for this Task:** A direct consequence of the points above is that structural pruning via Layer Dropping (SAPLING) was not an effective compression strategy for this specific use case. Both "Batched" and "Successive" dropping methods resulted in significant performance degradation that outweighed the benefits of reduced model size and potential speedups. The experiment suggests that when every layer contributes almost equally to a complex reasoning task, removing any of them causes an irreparable loss in capability.
