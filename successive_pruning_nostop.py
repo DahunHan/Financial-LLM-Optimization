@@ -125,17 +125,20 @@ for i in range(max_layers_to_drop + 1): # Loop from 0 drops to 16 drops
     print(f"Layers: {current_layer_count} -> Eval Loss: {current_eval_loss:.4f}")
     
     # --- Early Stopping Logic ---
-    if current_eval_loss < lowest_eval_loss:
-        lowest_eval_loss = current_eval_loss
-        # Find the path to the checkpoint that was just saved (e.g., './results_successive/run_0/checkpoint-390')
-        latest_checkpoint = f"{iteration_output_dir}/checkpoint-{trainer.state.global_step}"
-        best_model_checkpoint_path = latest_checkpoint
-        best_model_layer_count = current_layer_count
-        print(f"New best model found! Loss improved to {lowest_eval_loss:.4f}. Storing checkpoint: {best_model_checkpoint_path}")
-    else:
-        print(f"Overfitting detected! Eval loss increased from {lowest_eval_loss:.4f} to {current_eval_loss:.4f}.")
-        print("Stopping the successive pruning process.")
-        break # Exit the loop.
+    # --- Early Stopping Logic (DISABLED FOR FIXED-LENGTH RUN) ---
+    # The original early stopping logic is commented out to force the experiment
+    # to run for the full `max_layers_to_drop` iterations.
+
+    # if current_eval_loss < lowest_eval_loss:
+    lowest_eval_loss = current_eval_loss
+    # Find the path to the checkpoint that was just saved
+    latest_checkpoint = f"{iteration_output_dir}/checkpoint-{trainer.state.global_step}"
+    best_model_checkpoint_path = latest_checkpoint
+    best_model_layer_count = current_layer_count
+    print(f"Storing checkpoint from this iteration: {best_model_checkpoint_path}")
+    # else:
+    #     print(f"Eval loss increased, but continuing due to fixed-run setting.")
+    #     # The `break` command is removed..
 
     # --- Prune the next layer for the next iteration ---
     # This happens only if we haven't stopped.
