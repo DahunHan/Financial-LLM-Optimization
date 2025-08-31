@@ -54,17 +54,17 @@ To validate our hypothesis, this research will implement and compare the followi
 
 This table summarizes the final accuracy of all baseline and proposed models on the FinQA dataset. The results for Successive Dropping will be added upon completion.
 
-| Method | Precision | Accuracy (%) | Model Size (Layers) | Notes |
-| :--- | :---: | :---: | :---: | :--- |
-| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | 32/32 (100%) | Performance Ceiling |
-| **LoRA** | 16-bit (FP16) | 1.47% | 32/32 (100%) | High-quality Efficiency Baseline |
-| **QLoRA** | 4-bit | 1.02% | 32/32 (100%) | Best Quantization Baseline |
-| **LoRA** | 8-bit | 0.91% | 32/32 (100%) | Mid-quality Efficiency Baseline |
-| **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68% | 28/32 (87.5%) | 12.5% Model Size Reduction |
-| **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45% | 24/32 (75%) | 25% Model Size Reduction |
-| **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57% | 20/32 (62.5%) | 37.5% Model Size Reduction |
-| **SAPLING (Batched, -16L)** | 16-bit (BF16) | 0.23% | 16/32 (50%) | 50% Model Size Reduction |
-| **SAPLING (Successive)** | 16-bit (BF16) | TBD | TBD | Compares gradual vs. batched |
+| Method                          | Precision     | Accuracy (%) | Model Size (Layers) | Notes                               |
+| :------------------------------ | :-----------: | :----------: | :-----------------: | :---------------------------------- |
+| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | 32/32 (100%)        | Performance Ceiling                 |
+| **LoRA** | 16-bit (FP16) | 1.47%        | 32/32 (100%)        | High-quality Efficiency Baseline    |
+| **QLoRA** | 4-bit         | 1.02%        | 32/32 (100%)        | Best Quantization Baseline          |
+| **LoRA** | 8-bit         | 0.91%        | 32/32 (100%)        | Mid-quality Efficiency Baseline     |
+| **SAPLING (Successive, -5L)** | 16-bit (BF16) | **1.13%** | 27/32 (84.4%)       | **Optimal Sweet Spot Found** |
+| **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68%        | 28/32 (87.5%)       | 12.5% Model Size Reduction          |
+| **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57%        | 20/32 (62.5%)       | 37.5% Model Size Reduction          |
+| **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45%        | 24/32 (75%)         | 25% Model Size Reduction            |
+| **SAPLING (Batched, -16L)** | 16-bit (BF16) | 0.23%        | 16/32 (50%)         | 50% Model Size Reduction            |
 
 <br>
 
