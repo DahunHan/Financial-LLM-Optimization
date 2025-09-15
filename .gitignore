@@ -20,3 +20,6 @@ __pycache__/
 /results_full_ft/
 /results_sapling/
 /run_7_drop_7/
+
+# Ignore large data
+/data/augmented_train.json
