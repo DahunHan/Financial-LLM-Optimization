@@ -36,10 +36,10 @@ hf_token = os.getenv("HUGGING_FACE_HUB_TOKEN")
 print("Hugging Face Token Loaded.")
 
 # ### CHANGE 1: Point to the fully fine-tuned model directory ###
-fully_tuned_model_path = "./results_full_ft/checkpoints/checkpoint-390"
+fully_tuned_model_path = "./results_full_ft_augmented/checkpoint-4683"
 validation_data_path = "data/dev.json"
 # ### CHANGE 2: Set a new output file name for the results ###
-results_output_path = "evaluation_results_checkpoint-390.json"
+results_output_path = "evaluation_results_augmentedFFT_checkpoint-4683.json"
 
 # --- 2. Load Fully Fine-Tuned Model in BF16 Precision ---
 print(f"Loading fully fine-tuned model from: {fully_tuned_model_path}")
