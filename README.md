@@ -48,6 +48,11 @@ To validate our hypothesis, this research will implement and compare the followi
     * **Step 2 - Pruning Strategy A (Batched Dropping):** Prune the N least important layers at once (for N = 4, 8, 12, 16) and then fine-tune the resulting smaller model to recover performance.
     * **Step 3 - Pruning Strategy B (Successive Dropping):** Iteratively train for 1 epoch and then prune the single least important layer. This process is repeated, with early stopping implemented to halt the process if performance degrades.
 
+* **Phase 3: Date-Centric Approach**
+    * **Objective:** To investigate if data augmentation can mitigate the severe overfitting observed in earlier phases.
+    * **Experiment:**
+        1.  Use Gemini 1.5 Flash to paraphrase the training set, increasing its size by 4x.
+        2.  Re-run the Full Fine-Tuning experiment on the augmented dataset.
 <br>
 
 ## 4. Final Results
@@ -61,6 +66,7 @@ This table summarizes the final accuracy of all baseline and proposed models on 
 | **SAPLING (Successive, -5L)** | 16-bit (BF16) | **1.13%** | 84.4% (27/32)        | **71.1%** |
 | **QLoRA (4-bit)** | 4-bit         | 1.02%        | 100% (32/32)         | 64.2%                 |
 | **LoRA (8-bit)** | 8-bit         | 0.91%        | 100% (32/32)         | 57.2%                 |
+| **Full FT (Augmented Data)** | 16-bit (BF16) | 0.68%        | 100% (32/32)         | 42.8%                 |
 | **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68%        | 87.5% (28/32)        | 42.8%                 |
 | **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57%        | 62.5% (20/32)        | 35.8%                 |
 | **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45%        | 75.0% (24/32)        | 28.3%                 |
@@ -68,7 +74,19 @@ This table summarizes the final accuracy of all baseline and proposed models on 
 
 <br>
 
-## 5. Setup & How to Run
+## 5. Key Findings & Limitations
+
+This research has yielded several key insights into the challenges of fine-tuning and compressing LLMs for specialized, high-complexity domains like finance.
+
+* **Severe Overfitting due to Data Scarcity:** The primary limitation was the mismatch between the model's capacity (7B parameters) and the dataset's size (~6,600 samples). This led to rapid overfitting, often within a single epoch, across all fine-tuning methods.
+
+* **Distributed Nature of Financial Reasoning:** Layer importance analysis revealed that all 32 layers of Llama-2-7B contribute almost equally to the FinQA task. This suggests that complex financial reasoning is a function distributed across the entire model, not localized in specific layers.
+
+* **Ineffectiveness of Structural Pruning:** A direct consequence of the points above is that Layer Dropping (SAPLING) was not an effective compression strategy for this specific task. Removing any layer caused an irreparable loss in the model's distributed reasoning capability.
+
+* **Failure of Naive Data Augmentation:** Augmenting the dataset by paraphrasing questions with Gemini led to a significant performance drop (from 1.59% to 0.68%). This indicates that simply increasing the quantity of data is insufficient; the augmented data likely introduced noise and failed to add new, diverse knowledge, confusing the model instead of helping it generalize.
+
+## 6. Setup & How to Run
 
 This research can be reproduced using the following steps.
 
