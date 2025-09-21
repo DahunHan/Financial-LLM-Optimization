@@ -1,7 +1,7 @@
 ###
 # preprocess_tatqa.py
-# This script preprocesses the raw TAT-QA dataset into the simple
-# {"text": "..."} format, making it compatible with our existing training scripts.
+# This script preprocesses both the TRAIN and DEV sets of the raw TAT-QA dataset
+# into the simple {"text": "..."} format, making them compatible with our existing scripts.
 ###
 
 import os
@@ -10,13 +10,20 @@ from tqdm import tqdm
 
 # --- 1. SETUP: DEFINE FILE PATHS ---
 print("Initializing script and defining paths...")
-# Input path for the raw TAT-QA data.
-input_data_path = "data/tatqa_dataset_train.json"
 
-# The output path for the processed data.
-output_data_path = "data/processed_tatqa_train.json"
+# Define paths for both train and dev sets
+paths = {
+    "train": {
+        "input": "data/tatqa_dataset_train.json",
+        "output": "data/processed_tatqa_train.json"
+    },
+    "dev": {
+        "input": "data/tatqa_dataset_dev.json",
+        "output": "data/processed_tatqa_dev.json"
+    }
+}
 
-# --- 2. DEFINE DATA PROCESSING FUNCTIONS ---
+# --- 2. DEFINE DATA PROCESSING FUNCTIONS (Reused) ---
 
 def format_table(table_data):
     """Formats the table dictionary into a readable string."""
@@ -27,29 +34,25 @@ def format_table(table_data):
     except Exception:
         return "TABLE:\n[Error formatting table]"
 
-def create_prompt_for_tatqa(item):
+def create_prompts_for_tatqa_item(item):
     """
     Takes a single item from the TAT-QA dataset and yields a list of
     fully formatted text prompts, one for each question in the item.
     """
-    # Format the context (paragraphs and table)
     paragraphs = "\n".join([p['text'] for p in item.get('paragraphs', [])])
     table_str = format_table(item.get('table', {}))
     context = f"{paragraphs}\n\n{table_str}".strip()
 
     prompts = []
-    # Iterate through all questions associated with this context.
     for qa_pair in item.get('questions', []):
         question = qa_pair.get('question', 'N/A')
         
-        # TAT-QA answers can be a list or a single value. We handle both.
         answer_data = qa_pair.get('answer', 'N/A')
         if isinstance(answer_data, list):
             answer = ", ".join(map(str, answer_data))
         else:
             answer = str(answer_data)
 
-        # Build the final prompt text in our standard format.
         final_text = f"""### INSTRUCTION:
 Answer the question based on the context below.
 
@@ -67,23 +70,31 @@ Answer the question based on the context below.
 
 # --- 3. MAIN EXECUTION BLOCK ---
 
-print(f"Loading raw TAT-QA data from: {input_data_path}")
-with open(input_data_path, 'r', encoding='utf-8') as f:
-    raw_data = json.load(f)
+# Process both 'train' and 'dev' files
+for split_name, split_paths in paths.items():
+    input_path = split_paths["input"]
+    output_path = split_paths["output"]
 
-processed_data = []
-print(f"Processing {len(raw_data)} entries from TAT-QA...")
+    if not os.path.exists(input_path):
+        print(f"Input file not found for '{split_name}': {input_path}. Skipping.")
+        continue
 
-for item in tqdm(raw_data, desc="Preprocessing TAT-QA"):
-    # The create_prompt function returns a list of prompts for each item.
-    prompts_for_item = create_prompt_for_tatqa(item)
-    processed_data.extend(prompts_for_item)
+    print(f"\nProcessing '{split_name}' set...")
+    print(f"Loading raw TAT-QA data from: {input_path}")
+    with open(input_path, 'r', encoding='utf-8') as f:
+        raw_data = json.load(f)
 
-print(f"Generated a total of {len(processed_data)} processed data points.")
+    processed_data = []
+    print(f"Processing {len(raw_data)} entries from {split_name} set...")
 
-# --- 4. SAVE THE PROCESSED DATA ---
-print(f"Saving processed data to: {output_data_path}")
-with open(output_data_path, 'w', encoding='utf-8') as f:
-    json.dump(processed_data, f, indent=2, ensure_ascii=False)
+    for item in tqdm(raw_data, desc=f"Preprocessing {split_name}"):
+        prompts_for_item = create_prompts_for_tatqa_item(item)
+        processed_data.extend(prompts_for_item)
 
-print("\nTAT-QA preprocessing complete!")
+    print(f"Generated a total of {len(processed_data)} processed data points for {split_name} set.")
+
+    print(f"Saving processed {split_name} data to: {output_path}")
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(processed_data, f, indent=2, ensure_ascii=False)
+
+print("\n--- TAT-QA preprocessing for all sets complete! ---")

@@ -19,8 +19,8 @@ print("Hugging Face Token Loaded.")
 
 # --- 2. Model and Data Paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_path = "data/processed_train.json"
-validation_data_path = "data/processed_dev.json"
+train_data_files = ["data/processed_train.json, data/processed_tataqa_train.json"]
+validation_data_files = ["data/processed_dev.json, data/processed_tatqa_dev.json"]
 
 # --- 3. Load Model for Full Fine-Tuning in BF16 Precision ---
 print(f"Loading base model: {model_id} for Full Fine-Tuning in BF16 precision.")
@@ -43,8 +43,9 @@ tokenizer.padding_side = "right"
 
 # --- 6. Load and Tokenize Datasets ---
 print(f"Loading and tokenizing datasets...")
-train_dataset = load_dataset("json", data_files=train_data_path, split="train")
-validation_dataset = load_dataset("json", data_files=validation_data_path, split="train")
+# Use the list of files in the `data_files` argument
+train_dataset = load_dataset("json", data_files=train_data_files, split="train")
+validation_dataset = load_dataset("json", data_files=validation_data_files, split="train")
 
 def tokenize_function(examples):
     # Using a consistent max_length for all data splits
