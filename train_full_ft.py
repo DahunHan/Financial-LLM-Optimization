@@ -19,8 +19,8 @@ print("Hugging Face Token Loaded.")
 
 # --- 2. Model and Data Paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_files = ["data/processed_train.json, data/processed_tataqa_train.json"]
-validation_data_files = ["data/processed_dev.json, data/processed_tatqa_dev.json"]
+train_data_files = ["data/processed_train.json", "data/processed_tatqa_train.json"]
+validation_data_files = ["data/processed_dev.json", "data/processed_tatqa_dev.json"]
 
 # --- 3. Load Model for Full Fine-Tuning in BF16 Precision ---
 print(f"Loading base model: {model_id} for Full Fine-Tuning in BF16 precision.")
