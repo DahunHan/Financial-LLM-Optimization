@@ -1,8 +1,8 @@
 ###
 # combine_dev_datasets.py
-# This script combines the validation/development sets from FinQA and TAT-QA
+# This script combines the validation/development sets from FinQA, TAT-QA, and FiQA
 # into a single, unified validation set with a consistent format.
-# This is crucial for fairly evaluating models trained on the combined training data.
+# This FINAL version will be used to evaluate the model trained on all three datasets.
 ###
 
 import os
@@ -17,13 +17,15 @@ print("Initializing script and defining paths...")
 finqa_dev_path = "data/dev.json"
 # The original dev set from TAT-QA
 tatqa_dev_path = "data/tatqa_dataset_dev.json"
+# The original test set from FiQA (which we use as our dev set)
+fiqa_dev_path = "data/fiqa_test.json"
 
 # --- Output Path ---
-# The final, combined file that will be used for all future evaluations.
-output_path = "data/combined_dev.json"
+# The final, combined file for all evaluations.
+output_path = "data/final_combined_dev.json"
 
 
-# --- 2. DEFINE TAT-QA to FinQA CONVERSION FUNCTION ---
+# --- 2. DEFINE CONVERSION FUNCTIONS ---
 
 def convert_tatqa_to_finqa_format(tatqa_item):
     """
@@ -32,22 +34,16 @@ def convert_tatqa_to_finqa_format(tatqa_item):
     """
     finqa_formatted_items = []
     
-    # --- Step A: Reformat the table ---
-    # The table structure is slightly different. TAT-QA's table is nested.
     tatqa_table = tatqa_item.get('table', {}).get('table', [])
     finqa_table = {
         "header": tatqa_table[0] if tatqa_table else [],
         "rows": tatqa_table[1:] if len(tatqa_table) > 1 else []
     }
 
-    # --- Step B: Combine paragraphs into pre_text ---
-    # We will treat all paragraphs as 'pre_text' for simplicity.
     pre_text = [p['text'] for p in tatqa_item.get('paragraphs', [])]
-    post_text = [] # TAT-QA does not have a 'post_text' equivalent.
+    post_text = []
     
-    # --- Step C: Create a separate entry for each question ---
     for i, qa_pair in enumerate(tatqa_item.get('questions', [])):
-        # Convert the answer to a string, handling both lists and single values.
         answer_data = qa_pair.get('answer', '')
         if isinstance(answer_data, list):
             answer_str = ", ".join(map(str, answer_data))
@@ -58,7 +54,7 @@ def convert_tatqa_to_finqa_format(tatqa_item):
             "id": f"tatqa_{tatqa_item.get('uid', '')}_{i}",
             "pre_text": pre_text,
             "post_text": post_text,
-            "table": [[finqa_table]], # Match FinQA's nested list structure for the table
+            "table": [[finqa_table]],
             "qa": {
                 "question": qa_pair.get('question', ''),
                 "answer": answer_str
@@ -67,6 +63,31 @@ def convert_tatqa_to_finqa_format(tatqa_item):
         finqa_formatted_items.append(new_item)
         
     return finqa_formatted_items
+
+def convert_fiqa_to_finqa_format(fiqa_item):
+    """
+    Converts a single item from the FiQA dataset into the simpler FinQA format.
+    """
+    instruction = fiqa_item.get("instruction", "")
+    question = fiqa_item.get("input", "")
+    answer = fiqa_item.get("output", "")
+
+    if not all([instruction, question, answer]):
+        return None
+
+    new_item = {
+        # Create a unique ID for the FiQA item
+        "id": f"fiqa_item_{hash(question)}",
+        # FiQA context is in the 'instruction' field. We place it in 'pre_text'.
+        "pre_text": [instruction.strip()],
+        "post_text": [],
+        "table": [], # FiQA data does not contain tables.
+        "qa": {
+            "question": question,
+            "answer": answer
+        }
+    }
+    return new_item
 
 # --- 3. MAIN EXECUTION BLOCK ---
 
@@ -87,13 +108,26 @@ for item in tqdm(tatqa_dev_data_raw, desc="Converting TAT-QA dev set"):
     converted_tatqa_data.extend(converted_items)
 print(f"Converted TAT-QA dev set into {len(converted_tatqa_data)} FinQA-formatted entries.")
 
-# --- Combine the two datasets ---
-combined_dev_data = finqa_dev_data + converted_tatqa_data
+# --- Load and convert FiQA dev data ---
+print(f"Loading and converting FiQA dev data from: {fiqa_dev_path}")
+with open(fiqa_dev_path, 'r', encoding='utf-8') as f:
+    fiqa_dev_data_raw = json.load(f)
+
+converted_fiqa_data = []
+for item in tqdm(fiqa_dev_data_raw, desc="Converting FiQA dev set"):
+    converted_item = convert_fiqa_to_finqa_format(item)
+    if converted_item:
+        converted_fiqa_data.append(converted_item)
+print(f"Converted FiQA dev set into {len(converted_fiqa_data)} FinQA-formatted entries.")
+
+
+# --- Combine all three datasets ---
+combined_dev_data = finqa_dev_data + converted_tatqa_data + converted_fiqa_data
 print(f"\nCombined dataset created with a total of {len(combined_dev_data)} entries.")
 
 # --- Save the final combined dev file ---
-print(f"Saving combined dev dataset to: {output_path}")
+print(f"Saving final combined dev dataset to: {output_path}")
 with open(output_path, 'w', encoding='utf-8') as f:
     json.dump(combined_dev_data, f, indent=2, ensure_ascii=False)
 
-print("\n--- Combined dev dataset is ready! ---")
+print("\n--- Final combined dev dataset is ready! ---")
