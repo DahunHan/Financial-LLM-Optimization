@@ -1,8 +1,12 @@
 ###
-# train_full_ft.py: Full Fine-Tuning script for Llama-2-7B on A100
+# train_full_ft.py: Final Full Fine-Tuning script using the combined
+# FinQA, TAT-QA, and FiQA datasets.
+###
+
 import os
+import json
 import torch
-from datasets import load_dataset
+from datasets import Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -11,20 +15,32 @@ from transformers import (
     DataCollatorForLanguageModeling,
 )
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 # --- 1. Load Hugging Face Token ---
 load_dotenv()
 hf_token = os.getenv("HUGGING_FACE_HUB_TOKEN")
 print("Hugging Face Token Loaded.")
 
-# --- 2. Model and Data Paths ---
+# --- 2. Model and Data Paths (MODIFIED FOR FINAL EXPERIMENT) ---
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_files = ["data/processed_train.json", "data/processed_tatqa_train.json"]
-validation_data_files = ["data/processed_dev.json", "data/processed_tatqa_dev.json"]
+
+# List all training files to be combined
+train_data_files = [
+    "data/processed_train.json",       # FinQA
+    "data/processed_tatqa_train.json", # TAT-QA
+    "data/processed_fiqa_train.json"   # FiQA
+]
+
+# List all validation files to be combined for in-training evaluation
+validation_data_files = [
+    "data/processed_dev.json",         # FinQA
+    "data/processed_tatqa_dev.json",   # TAT-QA
+    "data/processed_fiqa_dev.json"     # FiQA
+]
 
 # --- 3. Load Model for Full Fine-Tuning in BF16 Precision ---
-print(f"Loading base model: {model_id} for Full Fine-Tuning in BF16 precision.")
-# A100 GPUs support bfloat16 for more stable training
+print(f"Loading base model: {model_id}")
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     torch_dtype=torch.bfloat16,
@@ -32,7 +48,6 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # --- 4. Configure Model for Training ---
-# Disable cache for training, enable gradient checkpointing for memory efficiency
 model.config.use_cache = False
 model.gradient_checkpointing_enable()
 
@@ -41,49 +56,48 @@ tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, toke
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
 
-# --- 6. Load and Tokenize Datasets ---
-print(f"Loading and tokenizing datasets...")
-# Use the list of files in the `data_files` argument
+# --- 6. Load and Tokenize Datasets (MODIFIED TO LOAD MULTIPLE FILES) ---
+print("Loading and tokenizing combined datasets...")
+
+# The `load_dataset` function can take a list of files directly.
+# The library will handle concatenating them into a single dataset.
 train_dataset = load_dataset("json", data_files=train_data_files, split="train")
 validation_dataset = load_dataset("json", data_files=validation_data_files, split="train")
 
 def tokenize_function(examples):
-    # Using a consistent max_length for all data splits
     return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
 
 tokenized_train_dataset = train_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
 tokenized_validation_dataset = validation_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
-print(f"Successfully loaded and tokenized datasets.")
+print(f"Successfully loaded and tokenized a combined dataset of {len(tokenized_train_dataset)} training samples.")
 
-# --- 7. Training Arguments for Full Fine-Tuning ---
+# --- 7. Training Arguments for Final Combined Training ---
 training_args = TrainingArguments(
-    # Directories and Naming
-    output_dir="./results_full_ft/checkpoints",
-    run_name="full_ft_5epoch_lr2e-5",
+    # Directories and Naming (MODIFIED FOR FINAL EXPERIMENT)
+    output_dir="./results_full_ft_combined/checkpoints",
+    run_name="full_ft_combined_5epoch",
     report_to="wandb",
 
     # Training Hyperparameters
-    num_train_epochs=5, # As requested: 5 epochs
+    num_train_epochs=5,
     learning_rate=2e-5,
-    # Memory efficient 8-bit optimizer
     optim="adamw_bnb_8bit",
-    # Memory Management for Full Fine-Tuning on A100
+
+    # Memory Management
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,
-    gradient_accumulation_steps=16, # Effective batch size = 1 * 16 = 16
+    gradient_accumulation_steps=16,
     gradient_checkpointing=True,
     gradient_checkpointing_kwargs={'use_reentrant':False},
-    bf16=True, # Use bfloat16 for stable training on Ampere GPUs
-
-    ## Disable dataloader multiprocessing
+    bf16=True,
     dataloader_num_workers=0,
     
     # Logging, Saving, and Evaluation
-    logging_steps=100,
+    logging_steps=500,
     evaluation_strategy="epoch",
     save_strategy="epoch",
-    save_total_limit=3, # Save only the last 3 checkpoints
-    load_best_model_at_end=True, # Load the best model based on eval_loss
+    save_total_limit=3,
+    load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
     greater_is_better=False,
 )
@@ -100,11 +114,11 @@ trainer = Trainer(
 )
 
 # --- 9. Start Training ---
-print("\nStarting Full Fine-Tuning...")
+print("\nStarting final Full Fine-Tuning on the combined dataset...")
 trainer.train()
 print("Training complete!")
 
 # --- 10. Save the final best model ---
-final_model_path = "./results_full_ft/final_model"
+final_model_path = "./results_full_ft_combined/final_model"
 trainer.save_model(final_model_path)
 print(f"Final best model saved to {final_model_path}")
