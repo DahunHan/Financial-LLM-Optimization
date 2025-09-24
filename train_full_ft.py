@@ -6,7 +6,7 @@
 import os
 import json
 import torch
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
