@@ -37,10 +37,10 @@ print("Hugging Face Token Loaded.")
 
 base_model_id = "meta-llama/Llama-2-7b-hf"
 # ### CHANGE 1: Point to the 16-bit adapter ###
-adapter_path = "./results_16bit/final_model"
-validation_data_path = "data/dev.json"
+adapter_path = "./results_16bit/checkpoints/checkpoint-24956"
+validation_data_path = "data/final_combined_dev.json"
 # ### CHANGE 2: Set a new output file name ###
-results_output_path = "evaluation_results_16bit.json"
+results_output_path = "evaluation_results_lora16bit.json"
 
 # --- 2. Load Model in 16-bit (FP16) Precision (MODIFIED FOR 16-BIT) ---
 print(f"Loading base model: {base_model_id}")
