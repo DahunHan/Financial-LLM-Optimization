@@ -43,6 +43,7 @@ bnb_config = BitsAndBytesConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     load_in_8bit=True,
+    torch_dtype = torch.bfloat16,
     device_map="auto",
     token=hf_token
 )
