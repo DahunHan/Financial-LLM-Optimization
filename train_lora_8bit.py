@@ -21,8 +21,19 @@ print("Hugging Face Token Loaded.")
 
 # --- 2. Model and Data Paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_path = "data/processed_train.json"
-validation_data_path = "data/processed_dev.json"
+# List all training files to be combined
+train_data_files = [
+    "data/processed_train.json",       # FinQA
+    "data/processed_tatqa_train.json", # TAT-QA
+    "data/processed_fiqa_train.json"   # FiQA
+]
+
+# List all validation files for in-training evaluation
+validation_data_files = [
+    "data/processed_dev.json",         # FinQA
+    "data/processed_tatqa_dev.json",   # TAT-QA
+    "data/processed_fiqa_dev.json"     # FiQA
+]
 
 # --- 3. Load Model with 8-bit Quantization ---
 print(f"Loading base model: {model_id} with 8-bit precision.")
@@ -31,7 +42,7 @@ bnb_config = BitsAndBytesConfig(
 )
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    quantization_config=bnb_config,
+    load_in_8bit=True,
     device_map="auto",
     token=hf_token
 )
@@ -44,8 +55,9 @@ tokenizer.padding_side = "right"
 
 # --- 5. Load and Tokenize Datasets ---
 print(f"Loading and tokenizing datasets...")
-train_dataset = load_dataset("json", data_files=train_data_path, split="train")
-validation_dataset = load_dataset("json", data_files=validation_data_path, split="train")
+# Load the combined datasets using the file lists
+train_dataset = load_dataset("json", data_files=train_data_files, split="train")
+validation_dataset = load_dataset("json", data_files=validation_data_files, split="train")
 
 def tokenize_function(examples):
     return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
@@ -70,14 +82,14 @@ training_args = TrainingArguments(
     output_dir="./results_8bit/checkpoints",
     run_name="8bit_15epoch_lr2e-5_resumed",
     report_to="wandb",
-    num_train_epochs=15, # Set the final target number of epochs
+    num_train_epochs=3, # Set the final target number of epochs
     per_device_train_batch_size=1,
     gradient_accumulation_steps=1,
     gradient_checkpointing=True,
     learning_rate=2e-5,
     fp16=True,
-    logging_steps=100,
-    eval_strategy="epoch",
+    logging_steps=500,
+    evaluation_strategy="epoch",
     save_strategy="epoch",
     remove_unused_columns=False,
 )
@@ -96,7 +108,7 @@ trainer = Trainer(
 # --- 9. Start Training ---
 print("\nResuming training from the last checkpoint...")
 # ### FIX: Use the official and robust resume functionality ###
-trainer.train(resume_from_checkpoint=True)
+trainer.train()
 print("Training complete!")
 
 # --- 10. Save the final model ---
