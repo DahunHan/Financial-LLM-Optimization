@@ -1,6 +1,6 @@
 ###
 # train_lora_8bit.py: Definitive 8-bit LoRA training script with all
-# compatibility fixes for k-bit training with gradient checkpointing.
+# compatibility fixes for k-bit training with gradient checkpointing on modern GPUs.
 ###
 
 import os
@@ -9,7 +9,7 @@ from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig, # Import BitsAndBytesConfig for explicit quantization settings
+    BitsAndBytesConfig,
     TrainingArguments,
     Trainer,
     DataCollatorForLanguageModeling,
@@ -35,26 +35,23 @@ validation_data_files = [
 # --- 3. Load Model with Explicit 8-bit Quantization Config ---
 print("Loading base model: meta-llama/Llama-2-7b-hf with 8-bit precision.")
 
-# ### FIX 1: Use an explicit BitsAndBytesConfig ###
-# This provides more control and stability over the quantization process.
 bnb_config = BitsAndBytesConfig(
     load_in_8bit=True,
 )
 
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    quantization_config=bnb_config, # Use the explicit config here
-    torch_dtype=torch.bfloat16,
+    quantization_config=bnb_config,
+    torch_dtype=torch.float16,
     token=hf_token,
-    device_map="auto" # device_map='auto' is fine with quantization_config
+    device_map="auto"
 )
 
 # --- 4. Prepare Model for K-bit Training (CRUCIAL STEP) ---
-# This function handles several compatibility issues between k-bit models and other features.
 print("Preparing 8-bit model for LoRA training...")
+# This function handles several compatibility issues.
 model = prepare_model_for_kbit_training(model)
 print("Model prepared.")
-
 
 # --- 5. Load Tokenizer ---
 tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, token=hf_token)
@@ -75,10 +72,19 @@ print(f"Successfully loaded and tokenized a combined dataset of {len(tokenized_t
 
 
 # --- 7. PEFT Configuration (LoRA) ---
+# ### FIX 1: Target ALL linear layers in the Llama-2 model for stability ###
 lora_config = LoraConfig(
     r=16,
     lora_alpha=32,
-    target_modules=["q_proj", "v_proj"],
+    target_modules=[
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    ],
     lora_dropout=0.05,
     bias="none",
     task_type="CAUSAL_LM",
@@ -89,19 +95,18 @@ model.print_trainable_parameters()
 
 # --- 8. Training Arguments ---
 # ### FIX 2: Explicitly set `use_reentrant=False` for gradient checkpointing ###
-# This is the recommended setting for new PyTorch versions and can resolve instabilities.
 training_args = TrainingArguments(
     output_dir="./results_lora_8bit_combined/checkpoints",
     run_name="lora_8bit_combined_5epoch",
     report_to="wandb",
-    num_train_epochs=5,
+    num_train_epochs=2,
     learning_rate=2e-5,
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,
     gradient_accumulation_steps=16,
-    gradient_checkpointing=True,
+    gradient_checkpointing=False,
     gradient_checkpointing_kwargs={'use_reentrant': False}, # Explicitly set this
-    bf16=True,
+    fp16=True,
     logging_steps=500,
     evaluation_strategy="epoch",
     save_strategy="epoch",
@@ -131,3 +136,4 @@ print("Training complete!")
 final_model_path = "./results_lora_8bit_combined/final_model"
 trainer.save_model(final_model_path)
 print(f"Final best model saved to {final_model_path}")
+
