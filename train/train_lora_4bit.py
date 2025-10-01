@@ -21,9 +21,12 @@ print("Hugging Face Token Loaded.")
 
 # --- 2. Model and Data Paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_path = "data/processed_train.json"
-# ### Use the newly created processed validation file ###
-validation_data_path = "data/processed_dev.json" 
+train_data_files = [
+    "data/processed_train.json", "data/processed_tatqa_train.json", "data/processed_fiqa_train.json"
+]
+validation_data_files = [
+    "data/processed_dev.json", "data/processed_tatqa_dev.json", "data/processed_fiqa_dev.json"
+]
 
 # --- 3. Load Model with 4-bit QLoRA Quantization ---
 print(f"Loading base model: {model_id} with 4-bit QLoRA precision.")
@@ -48,10 +51,10 @@ tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, toke
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
 
-# --- 5. Load and Tokenize Datasets ---
-print(f"Loading and tokenizing datasets...")
-train_dataset = load_dataset("json", data_files=train_data_path, split="train")
-validation_dataset = load_dataset("json", data_files=validation_data_path, split="train")
+# --- 6. Load and Tokenize Datasets ---
+print("Loading and tokenizing datasets...")
+train_dataset = load_dataset("json", data_files=train_data_files, split="train")
+validation_dataset = load_dataset("json", data_files=validation_data_files, split="train")
 
 def tokenize_function(examples):
     return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
@@ -62,7 +65,7 @@ print(f"Successfully loaded and tokenized datasets.")
 
 # --- 6. PEFT Configuration (LoRA) ---
 lora_config = LoraConfig(
-    lora_alpha=16,
+    lora_alpha=128,
     lora_dropout=0.1,
     r=64,
     bias="none",
@@ -72,16 +75,16 @@ model = get_peft_model(model, lora_config)
 
 # --- 7. Training Arguments (MODIFIED FOR MONITORING) ---
 training_args = TrainingArguments(
-    output_dir="./results_4bit/checkpoints",
+    output_dir="./results_4bit_combined/checkpoints",
     run_name="4bit_15epoch_lr2e-5",
     report_to="wandb",
-    num_train_epochs=15,
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=1,
+    num_train_epochs=3,
+    per_device_train_batch_size=8,
+    gradient_accumulation_steps=2,
     gradient_checkpointing=True,
     learning_rate=2e-5,
     fp16=True,
-    logging_steps=100,
+    logging_steps=500,
     eval_strategy="epoch",
     save_strategy="epoch",
     remove_unused_columns=False,
@@ -105,6 +108,6 @@ trainer.train()
 print("Training complete!")
 
 # --- 10. Save the final model ---
-final_model_path = "./results_4bit/final_model"
+final_model_path = "./results_4bit_combined/final_model"
 trainer.save_model(final_model_path)
 print(f"Final model saved to {final_model_path}")

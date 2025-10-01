@@ -44,7 +44,7 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     torch_dtype=torch.float16,
     token=hf_token,
-    device_map="auto"
+    device_map="auto",
 )
 
 # --- 4. Prepare Model for K-bit Training (CRUCIAL STEP) ---
@@ -101,9 +101,9 @@ training_args = TrainingArguments(
     report_to="wandb",
     num_train_epochs=2,
     learning_rate=2e-5,
-    per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,
-    gradient_accumulation_steps=16,
+    per_device_train_batch_size=4,
+    per_device_eval_batch_size=4,
+    gradient_accumulation_steps=4,
     gradient_checkpointing=False,
     gradient_checkpointing_kwargs={'use_reentrant': False}, # Explicitly set this
     fp16=True,

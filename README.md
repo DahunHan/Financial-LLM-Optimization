@@ -1,90 +1,55 @@
 # Financial LLM Optimization via Structural Compression
 
-A research project on enhancing the efficiency and accuracy of Large Language Models (LLMs) for the financial domain. This project systematically evaluates structural compression as a superior alternative to conventional methods for optimizing models on general-purpose hardware.
+A research project on enhancing the efficiency and accuracy of Large Language Models (LLMs) for the financial domain. This project systematically evaluates various fine-tuning and compression strategies to identify optimal approaches under realistic data constraints.
 
 <br>
 
 ## 1. Project Goal & Core Hypothesis
 
-The goal of this research is to identify and validate the most effective optimization strategies for LLMs in the specialized financial domain. We aim to maximize **practical inference efficiency** (i.e., speed and memory usage) on **consumer-grade and cloud hardware**, while maintaining the **high level of accuracy** required for complex financial tasks.
+The goal of this research is to identify and validate the most effective optimization strategies for LLMs in the specialized financial domain. We aim to maximize the trade-off between **model performance (accuracy)** and **inference efficiency** (size, speed) on both consumer and cloud hardware.
 
-Our core hypothesis is as follows:
-
-> The financial domain demands exceptional accuracy from LLMs. Conventional compression techniques like **Quantization** can be detrimental, as they uniformly degrade model parameters, potentially compromising the critical, complex reasoning capabilities essential in finance. In contrast, we hypothesize that **Structural Compression** methods, such as **Layer Dropping**, will achieve a superior trade-off. By selectively removing entire layers (knowledge modules) deemed less relevant to the financial domain, this approach can secure significant, hardware-agnostic efficiency gains while better preserving the model's core reasoning accuracy.
-
-<br>
-
-## 2. Methodology
-
-To validate our hypothesis, this research will implement and compare the following methodologies using `Llama-2-7B` on the `FinQA` dataset.
-
-* **Proposed Method: SAPLING (Structural Compression)**
-    * **Description:** A framework that performs domain-specific adaptation and compression simultaneously using Layer Dropping. We will investigate two distinct pruning strategies.
-    * **Role:** The novel, efficient optimization technique whose performance-efficiency trade-off is the subject of this study.
-
-* **Baseline 1: Full Fine-Tuning (Performance Ceiling)**
-    * **Description:** A standard fine-tuning approach where all model parameters are updated.
-    * **Role:** To establish the **theoretical maximum performance** achievable on the FinQA dataset, serving as the gold-standard accuracy benchmark.
-
-* **Baseline 2: LoRA & QLoRA (Efficiency Baselines)**
-    * **Description:** Parameter-Efficient Fine-Tuning (PEFT) methods that update only a small subset of parameters (LoRA) or operate on a quantized base model (QLoRA).
-    * **Role:** To represent the **current industry standard for efficient fine-tuning**.
+Our core hypothesis evolved throughout the research:
+> Initially, we hypothesized that **Structural Compression (SAPLING)** would outperform standard quantization. However, early experiments revealed severe **overfitting** as the primary challenge. The revised focus is to test which fine-tuning methodology offers the best performance and resistance to overfitting when trained on a diverse, combined dataset.
 
 <br>
 
-## 3. Experimental Plan
+## 2. Methodology & Experimental Plan
 
-* **Phase 1: Establish Performance Baselines**
-    * **Objective:** To fine-tune the Llama-2-7B model using various standard methods to create a comprehensive set of performance and efficiency benchmarks.
-    * **Experiments:**
-        1.  Full Fine-Tuning (16-bit)
-        2.  LoRA Fine-Tuning (16-bit)
-        3.  LoRA Fine-Tuning (8-bit)
-        4.  QLoRA Fine-Tuning (4-bit)
+This research was conducted in iterative phases, with findings from each phase informing the next.
 
-* **Phase 2: Evaluate Proposed Method (SAPLING)**
-    * **Objective:** To implement and apply the Layer Dropping framework using two different strategies and compare their performance against the baselines.
-    * **Step 1 - Diagnosis (Shared):** Train LoRA adapters on all layers for 1 epoch to rank layer importance.
-    * **Step 2 - Pruning Strategy A (Batched Dropping):** Prune the N least important layers at once (for N = 4, 8, 12, 16) and then fine-tune the resulting smaller model to recover performance.
-    * **Step 3 - Pruning Strategy B (Successive Dropping):** Iteratively train for 1 epoch and then prune the single least important layer. This process is repeated, with early stopping implemented to halt the process if performance degrades.
+* **Phase 1: Initial Baselines (on FinQA dataset)**
+    * **Models:** Full Fine-Tuning (FFT), LoRA (16/8-bit), QLoRA (4-bit).
+    * **Finding:** Severe overfitting occurred within 1-2 epochs due to the small dataset size relative to the model's capacity.
 
-* **Phase 3: Date-Centric Approach**
-    * **Objective:** To investigate if data augmentation can mitigate the severe overfitting observed in earlier phases.
-    * **Experiment:**
-        1.  Use Gemini 1.5 Flash to paraphrase the training set, increasing its size by 4x.
-        2.  Re-run the Full Fine-Tuning experiment on the augmented dataset.
-<br>
+* **Phase 2: Structural Compression (on FinQA dataset)**
+    * **Models:** SAPLING (Batched & Successive Layer Dropping).
+    * **Finding:** Performance degraded significantly, suggesting financial reasoning is distributed across all layers, making structural pruning ineffective for this task.
 
-## 4. Final Results
-
-This table summarizes the final accuracy of all baseline and proposed models on the FinQA dataset, sorted by performance. The "Compression Rate" indicates the percentage of layers remaining, while "Performance Retention" measures the accuracy relative to the Full Fine-Tuning baseline.
-
-| Method                          | Precision     | Accuracy (%) | Compression (Layers) | Performance Retention |
-| :------------------------------ | :-----------: | :----------: | :------------------: | :-------------------: |
-| **Full Fine-Tuning** | 16-bit (BF16) | **1.59%** | 100% (32/32)         | **100%** |
-| **LoRA (16-bit)** | 16-bit (FP16) | 1.47%        | 100% (32/32)         | 92.5%                 |
-| **SAPLING (Successive, -5L)** | 16-bit (BF16) | **1.13%** | 84.4% (27/32)        | **71.1%** |
-| **QLoRA (4-bit)** | 4-bit         | 1.02%        | 100% (32/32)         | 64.2%                 |
-| **LoRA (8-bit)** | 8-bit         | 0.91%        | 100% (32/32)         | 57.2%                 |
-| **Full FT (Augmented Data)** | 16-bit (BF16) | 0.68%        | 100% (32/32)         | 42.8%                 |
-| **SAPLING (Batched, -4L)** | 16-bit (BF16) | 0.68%        | 87.5% (28/32)        | 42.8%                 |
-| **SAPLING (Batched, -12L)** | 16-bit (BF16) | 0.57%        | 62.5% (20/32)        | 35.8%                 |
-| **SAPLING (Batched, -8L)** | 16-bit (BF16) | 0.45%        | 75.0% (24/32)        | 28.3%                 |
-| **SAPLING (Batched, -16L)** | 16-bit (BF16) | 0.23%        | 50.0% (16/32)        | 14.5%                 |         |
+* **Phase 3: Data-Centric Approaches**
+    * **Experiment 3a (Augmentation):** Paraphrased the FinQA dataset using Gemini.
+    * **Finding:** Performance dropped drastically (1.59% -> 0.68%), proving that data quality and diversity are more critical than sheer quantity.
+    * **Experiment 3b (Combination):** Combined three distinct datasets (**FinQA**, **TAT-QA**, **FiQA**) to enhance data volume and, more importantly, diversity. This became the definitive dataset for the final experiments.
 
 <br>
 
-## 5. Key Findings & Limitations
+## 4. Final Results (Combined Dataset)
 
-This research has yielded several key insights into the challenges of fine-tuning and compressing LLMs for specialized, high-complexity domains like finance.
+This table summarizes the final accuracy of all models fine-tuned on the **combined FinQA + TAT-QA + FiQA dataset**.
 
-* **Severe Overfitting due to Data Scarcity:** The primary limitation was the mismatch between the model's capacity (7B parameters) and the dataset's size (~6,600 samples). This led to rapid overfitting, often within a single epoch, across all fine-tuning methods.
+| Method | Precision | Accuracy (%) | Performance vs. FFT | Notes |
+| :--- | :---: | :----------: | :-----------------: | :--- |
+| **LoRA (16-bit)** | 16-bit (FP16) | **18.08%** | **100.1%** | **Best performing model**; demonstrates superior regularization. |
+| **Full Fine-Tuning** | 16-bit (BF16) | 18.06% | 100% | New Performance Ceiling |
+| **LoRA (8-bit)** | 8-bit | TBD | TBD | Currently in training. |
+| **QLoRA (4-bit)** | 4-bit | TBD | TBD | Next to be trained. |
 
-* **Distributed Nature of Financial Reasoning:** Layer importance analysis revealed that all 32 layers of Llama-2-7B contribute almost equally to the FinQA task. This suggests that complex financial reasoning is a function distributed across the entire model, not localized in specific layers.
+<br>
 
-* **Ineffectiveness of Structural Pruning:** A direct consequence of the points above is that Layer Dropping (SAPLING) was not an effective compression strategy for this specific task. Removing any layer caused an irreparable loss in the model's distributed reasoning capability.
+## 5. Key Findings & Future Directions
 
-* **Failure of Naive Data Augmentation:** Augmenting the dataset by paraphrasing questions with Gemini led to a significant performance drop (from 1.59% to 0.68%). This indicates that simply increasing the quantity of data is insufficient; the augmented data likely introduced noise and failed to add new, diverse knowledge, confusing the model instead of helping it generalize.
+* **Data Diversity is Key:** Combining multiple datasets with different characteristics (quantitative vs. qualitative) was the single most effective strategy, boosting performance from ~1.5% to over 18%.
+* **LoRA as a Superior Regularizer:** In a data-rich environment, LoRA's constrained training slightly outperformed the unconstrained Full Fine-Tuning, suggesting it's a more robust fine-tuning method that is less susceptible to noise in the training data.
+* **Next Steps:** Complete the 8-bit and 4-bit LoRA experiments on the combined dataset to finalize the performance comparison of different optimization techniques.
 
 ## 6. Setup & How to Run
 

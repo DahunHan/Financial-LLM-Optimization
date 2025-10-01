@@ -39,10 +39,10 @@ print("Hugging Face Token Loaded.")
 
 base_model_id = "meta-llama/Llama-2-7b-hf"
 # ### CHANGE 1: Point to the 8-bit adapter ###
-adapter_path = "./results_8bit/checkpoints/checkpoint-18753"
-validation_data_path = "data/dev.json"
+adapter_path = "./results_8bit_combined/checkpoints/checkpoint-1559"
+validation_data_path = "data/combined_dev.json"
 # ### CHANGE 2: Set a new output file name ###
-results_output_path = "evaluation_results_8bit.json"
+results_output_path = "evaluation_results_8bit_combined.json"
 
 # --- 2. Load Model with 8-bit Quantization (MODIFIED FOR 8-BIT) ---
 # ### CHANGE 3: Use the 8-bit quantization configuration ###
