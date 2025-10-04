@@ -1,0 +1,40 @@
+{
+  "os":  "Windows-10-10.0.19045-SP0",
+  "python":  "CPython 3.10.11",
+  "startedAt":  "2025-10-01T23:14:29.467903Z",
+  "program":  "C:\\Users\\dahun\\Financial-LLM-Optimization\\train\\train_lora_4bit.py",
+  "codePath":  "train\\train_lora_4bit.py",
+  "codePathLocal":  "train\\train_lora_4bit.py",
+  "git":  {
+    "remote":  "https://github.com/DahunHan/Financial-LLM-Optimization.git",
+    "commit":  "0dc2cbd6a8e23b169aa9bdeaf88ec62e416d9c09"
+  },
+  "email":  "dahunh@gmail.com",
+  "root":  "C:\\Users\\dahun\\Financial-LLM-Optimization",
+  "host":  "DESKTOP-9E0ET2E",
+  "executable":  "C:\\Users\\dahun\\Financial-LLM-Optimization\\.venv\\Scripts\\python.exe",
+  "cpu_count":  6,
+  "cpu_count_logical":  12,
+  "gpu":  "NVIDIA GeForce RTX 3080",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "1023484063744",
+      "used":  "724720316416"
+    }
+  },
+  "memory":  {
+    "total":  "34080784384"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce RTX 3080",
+      "memoryTotal":  "10737418240",
+      "cudaCores":  8704,
+      "architecture":  "Ampere",
+      "uuid":  "GPU-92dd48c9-a50f-292e-60e8-9bcbfab9b286"
+    }
+  ],
+  "cudaVersion":  "13.0",
+  "writerId":  "sbsvpumixwkenxhsis8j7czf77l2g3td"
+}

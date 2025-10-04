@@ -26,7 +26,11 @@ print("Hugging face token loaded!")
 
 # Define the base model and data paths
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_path = "data/processed_train.json"
+train_data_files = [
+    "data/processed_train.json", 
+    "data/processed_tatqa_train.json", 
+    "data/processed_fiqa_train.json"
+]
 output_dir = "./results_sapling/importance_probing"
 ranking_output_path  = "layer_importance_ranking.json"
 
@@ -50,16 +54,21 @@ tokenizer.padding_side = "right" # Padding on the right is crucial for decoder-o
 # This is to measure their individual response to fine-tuning.
 print("Applying LoRA adapters to all target layers!")
 lora_config = LoraConfig(
-    r=16, # Rank of the update matrices. A higher rank means more parameters. 
-    # We might want to change this rank in the future to see trend. (Obviously we want the highest per.)
-    lora_alpha = 32, # A scaling factor for the LoRA updates.
-    # Let us target all linear layers within the self-attention blocks to get a comprehensive importance score
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-    # This code makes sure that adapaters are attached at the 4 core linear layers.
+    r=64,                      # 랭크를 높여 측정 민감도 향상
+    lora_alpha=128,              # r 값에 맞춰 alpha 조정 (2*r)
+    target_modules=[           # 모든 선형 레이어를 타겟팅하여 종합적인 점수 측정
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    ],
     lora_dropout=0.05,
     bias="none",
     task_type="CAUSAL_LM",
-) 
+)
 
 # Use PEFT library to apply the LoRA config. to the model.
 model = get_peft_model(model, lora_config)
@@ -67,8 +76,8 @@ print("LoRA adapters applied. Trainable parameters : ")
 model.print_trainable_parameters() # This will show the number of parameters we are actually training
 
 # 4. LOAD AND PREPARE DATASET
-print(f"Loading and tokenizing training dataset from : {train_data_path}")
-train_dataset = load_dataset("json", data_files=train_data_path, split="train")
+print(f"Loading and tokenizing training dataset from combined sources...")
+train_dataset = load_dataset("json", data_files=train_data_files, split="train")
 
 # This function tokenizes the text data into a format the model can understand
 def tokenize_function(examples):
@@ -85,8 +94,8 @@ training_args=TrainingArguments(
     output_dir = output_dir,
     run_name="sapling_importance_probing",
     num_train_epochs=1,
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=16,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=4,
     learning_rate=2e-5,
     bf16=True,
     logging_steps=500,

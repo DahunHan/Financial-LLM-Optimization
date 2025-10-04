@@ -39,8 +39,8 @@ print("Hugging Face Token Loaded.")
 
 base_model_id = "meta-llama/Llama-2-7b-hf"
 # ### CHANGE 1: Point to the 8-bit adapter ###
-adapter_path = "./results_8bit_combined/checkpoints/checkpoint-1559"
-validation_data_path = "data/combined_dev.json"
+adapter_path = "./results_lora_8bit_combined/checkpoints/checkpoint-1559"
+validation_data_path = "data/final_combined_dev.json"
 # ### CHANGE 2: Set a new output file name ###
 results_output_path = "evaluation_results_8bit_combined.json"
 
@@ -93,33 +93,56 @@ print(f"Loading validation data from: {validation_data_path}")
 with open(validation_data_path, 'r', encoding='utf-8') as f:
     validation_data = json.load(f)
 
+# --- NEW: Batch Inference Implementation ---
 results = []
 correct_predictions = 0
+batch_size = 8  # GPU 메모리에 따라 4, 8, 16 등으로 조절
 
-print(f"\nStarting evaluation on {len(validation_data)} samples...")
-for sample in tqdm(validation_data, desc="Evaluating"):
-    prompt = create_inference_prompt(sample)
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+print(f"\nStarting evaluation on {len(validation_data)} samples with batch size {batch_size}...")
 
-    with torch.no_grad():
-        outputs = model.generate(input_ids=inputs["input_ids"], max_new_tokens=50)
+# tqdm을 사용하여 전체 데이터셋에 대한 진행률 표시
+for i in tqdm(range(0, len(validation_data), batch_size), desc="Evaluating"):
+    # 1. 처리할 배치 데이터 슬라이싱
+    batch_samples = validation_data[i:i + batch_size]
     
-    decoded_output = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    generated_answer_text = decoded_output[len(prompt):].strip()
-    ground_truth_text = str(sample.get('qa', {}).get('answer', ''))
+    # 2. 배치 전체에 대한 프롬프트 생성
+    batch_prompts = [create_inference_prompt(sample) for sample in batch_samples]
 
-    is_correct = is_answer_correct(generated_answer_text, ground_truth_text)
+    # 3. 배치 토크나이징 (padding 추가)
+    inputs = tokenizer(
+        batch_prompts, 
+        return_tensors="pt", 
+        padding=True, 
+        truncation=True, 
+        max_length=512
+    ).to("cuda")
 
-    if is_correct:
-        correct_predictions += 1
+    # 4. 배치 생성
+    with torch.no_grad():
+        outputs = model.generate(**inputs, max_new_tokens=50, do_sample=False)
+    
+    # 5. 배치 디코딩
+    decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    results.append({
-        "id": sample.get("id"),
-        "question": sample.get('qa', {}).get('question'),
-        "ground_truth": ground_truth_text,
-        "generated_answer": generated_answer_text,
-        "is_correct": is_correct
-    })
+    # 6. 배치 결과 처리
+    for j, decoded_output in enumerate(decoded_outputs):
+        sample = batch_samples[j]
+        prompt = batch_prompts[j]
+        
+        generated_answer_text = decoded_output[len(prompt):].strip()
+        ground_truth_text = str(sample.get('qa', {}).get('answer', ''))
+        is_correct = is_answer_correct(generated_answer_text, ground_truth_text)
+
+        if is_correct:
+            correct_predictions += 1
+
+        results.append({
+            "id": sample.get("id"),
+            "question": sample.get('qa', {}).get('question'),
+            "ground_truth": ground_truth_text,
+            "generated_answer": generated_answer_text,
+            "is_correct": is_correct
+        })
 
 accuracy = (correct_predictions / len(validation_data)) * 100 if validation_data else 0
 

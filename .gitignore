@@ -14,7 +14,7 @@ __pycache__/
 .env
 
 # Ignore training output directories
-/results_4bit/
+/results_4bit_combined/
 /results_8bit/
 /results_16bit/
 /results_full_ft/

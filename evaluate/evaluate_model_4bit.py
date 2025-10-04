@@ -47,9 +47,9 @@ print("Hugging Face Token Loaded.")
 # # Define the base model and the path to our trained adapter.
 # # You can switch this to "./results_8bit/final_model" to evaluate the 8-bit model.
 base_model_id = "meta-llama/Llama-2-7b-hf"
-adapter_path = "./results_4bit/checkpoint-62510"
-validation_data_path = "data/dev.json"
-results_output_path = "evaluation_results_4bit.json"
+adapter_path = "./results_4bit_combined/checkpoints/checkpoint-3120"
+validation_data_path = "data/final_combined_dev.json"
+results_output_path = "evaluation_results_4bit_combined.json"
 
 # --- 3. Load the Quantized Base Model and Adapter ---
 # # It's crucial to use the same quantization config as in training.
@@ -114,40 +114,48 @@ print(f"Loading validation data from: {validation_data_path}")
 with open(validation_data_path, 'r', encoding='utf-8') as f:
     validation_data = json.load(f)
 
-# --- 6. Run Evaluation Loop ---
 results = []
 correct_predictions = 0
+batch_size = 8 # 4-bit is memory efficient, can increase to 16 if VRAM allows.
 
-print(f"\nStarting evaluation on {len(validation_data)} samples...")
-# # Use tqdm to create a progress bar for the loop.
-for sample in tqdm(validation_data, desc="Evaluating"):
-    # # Prepare the prompt for the current sample.
-    prompt = create_inference_prompt(sample)
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+print(f"\nStarting evaluation on {len(validation_data)} samples with batch size {batch_size}...")
 
-    # # Generate an answer from the model.
-    with torch.no_grad(): # # Disable gradient calculation for faster inference.
-        outputs = model.generate(input_ids=inputs["input_ids"], max_new_tokens=50)
+for i in tqdm(range(0, len(validation_data), batch_size), desc="Evaluating"):
+    batch_samples = validation_data[i:i + batch_size]
+    batch_prompts = [create_inference_prompt(sample) for sample in batch_samples]
+
+    inputs = tokenizer(
+        batch_prompts, 
+        return_tensors="pt", 
+        padding=True, 
+        truncation=True, 
+        max_length=512
+    ).to("cuda")
+
+    with torch.no_grad():
+        # Add do_sample=False to prevent numerical instability issues
+        outputs = model.generate(**inputs, max_new_tokens=50, do_sample=False)
     
-    # # Decode the output and extract the answer part.
-    decoded_output = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    generated_answer_text = decoded_output[len(prompt):].strip()
-    # # Get the actual correct answer from the dataset.
-    ground_truth_answer = str(sample.get('qa', {}).get('answer', ''))
+    decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    is_correct = is_answer_correct(generated_answer_text, ground_truth_answer)
+    for j, decoded_output in enumerate(decoded_outputs):
+        sample = batch_samples[j]
+        prompt = batch_prompts[j]
+        
+        generated_answer_text = decoded_output[len(prompt):].strip()
+        ground_truth_answer = str(sample.get('qa', {}).get('answer', ''))
+        is_correct = is_answer_correct(generated_answer_text, ground_truth_answer)
 
-    if is_correct:
-        correct_predictions += 1
+        if is_correct:
+            correct_predictions += 1
 
-    # # Store the results for this sample.
-    results.append({
-        "id": sample.get("id"),
-        "question": sample.get('qa', {}).get('question'),
-        "ground_truth": ground_truth_answer,
-        "generated_answer": generated_answer_text,
-        "is_correct": is_correct
-    })
+        results.append({
+            "id": sample.get("id"),
+            "question": sample.get('qa', {}).get('question'),
+            "ground_truth": ground_truth_answer,
+            "generated_answer": generated_answer_text,
+            "is_correct": is_correct
+        })
 
 # --- 7. Calculate and Save Final Results ---
 # # Calculate the final accuracy.

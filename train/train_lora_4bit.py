@@ -85,7 +85,7 @@ training_args = TrainingArguments(
     learning_rate=2e-5,
     fp16=True,
     logging_steps=500,
-    eval_strategy="epoch",
+    evaluation_strategy="epoch",
     save_strategy="epoch",
     remove_unused_columns=False,
 )
