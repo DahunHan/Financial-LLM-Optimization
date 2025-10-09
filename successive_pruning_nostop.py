@@ -130,7 +130,7 @@ for i in range(max_layers_to_drop + 1):
         print(f"New best loss found! Storing checkpoint: {best_model_checkpoint_path}")
     else:
         print(f"Eval loss of {current_eval_loss:.4f} is higher than the best loss of {lowest_eval_loss:.4f}. Stopping.")
-        break
+        # break
 
     # --- CORRECTED: Pruning and Weight Inheritance Logic ---
     if i < max_layers_to_drop:
