@@ -27,8 +27,12 @@ print("Hugging Face Token Loaded.")
 
 # --- Define base model and data paths ---
 model_id = "meta-llama/Llama-2-7b-hf"
-train_data_path = "data/processed_train.json"
-validation_data_path = "data/processed_dev.json"
+train_data_files = [
+    "data/processed_train.json",       # FinQA
+    "data/processed_tatqa_train.json", # TAT-QA
+    "data/processed_fiqa_train.json"   # FiQA
+]
+validation_data_path = "data/final_combined_dev.json"
 ranking_input_path = "layer_importance_ranking.json"
 base_output_dir = "./results_successive" # Base directory for this experiment's results.
 
