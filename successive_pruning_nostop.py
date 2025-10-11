@@ -1,8 +1,8 @@
 ###
-# successive_pruning_v2_corrected.py
-# This script implements a robust version of "Successive Dropping with Early Stopping".
-# It correctly preserves learned weights between iterations and stops automatically
-# when performance degrades, efficiently finding the optimal trade-off point.
+# successive_pruning_v3_final.py
+# This is the definitive, corrected script for successive pruning.
+# It correctly inherits the trained model from the previous iteration in memory,
+# ensuring a true successive pruning process.
 ###
 
 import os
@@ -19,7 +19,7 @@ from transformers import (
 from datasets import load_dataset
 from dotenv import load_dotenv
 
-# --- 1. SETUP: LOAD ENVIRONMENT VARIABLES AND DEFINE PATHS ---
+# --- 1. SETUP ---
 load_dotenv()
 hf_token = os.getenv("HUGGING_FACE_HUB_TOKEN")
 print("Hugging Face Token Loaded.")
@@ -28,7 +28,6 @@ model_id = "meta-llama/Llama-2-7b-hf"
 train_data_files = [
     "data/processed_train.json", "data/processed_tatqa_train.json", "data/processed_fiqa_train.json"
 ]
-# For this experiment, we use a combined validation set to get a reliable eval_loss
 validation_data_files = [
     "data/processed_dev.json", "data/processed_tatqa_dev.json", "data/processed_fiqa_dev.json"
 ]
@@ -36,7 +35,6 @@ ranking_input_path = "layer_importance_ranking.json"
 base_output_dir = "./results_successive"
 
 # --- 2. LOAD LAYER RANKING ---
-print(f"Loading layer importance ranking from: {ranking_input_path}")
 with open(ranking_input_path, 'r') as f:
     ranked_layers = json.load(f)
 layers_to_drop_in_order = [layer['layer_index'] for layer in ranked_layers]
@@ -62,19 +60,16 @@ def tokenize_function(examples):
 
 tokenized_train_dataset = train_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
 tokenized_validation_dataset = validation_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
-print("Datasets successfully loaded and tokenized.")
+print("Datasets successfully loaded.")
 
 # --- 5. ITERATIVE PRUNING AND FINE-TUNING LOOP ---
+results_log = []
+best_model_so_far = None
 lowest_eval_loss = float('inf')
-best_model_checkpoint_path = None
-best_model_layer_count = current_model.config.num_hidden_layers
 # A map to track original layer indices to current indices
 layer_index_map = list(range(current_model.config.num_hidden_layers))
-
-# Let's check up to 10 layers dropped, as performance usually drops off steeply.
 max_layers_to_drop = 10 
 
-# First, run a baseline training on the full model (i=0)
 for i in range(max_layers_to_drop + 1):
     num_dropped = i
     current_layer_count = current_model.config.num_hidden_layers
@@ -98,11 +93,7 @@ for i in range(max_layers_to_drop + 1):
         bf16=True,
         logging_strategy="epoch",
         evaluation_strategy="epoch",
-        save_strategy="epoch",
-        save_total_limit=1,
-        load_best_model_at_end=True, # Let Trainer handle the best model in this small run
-        metric_for_best_model="eval_loss",
-        greater_is_better=False,
+        save_strategy="no", # We don't need to save checkpoints, we pass the model in memory
         report_to="wandb",
     )
 
@@ -121,55 +112,51 @@ for i in range(max_layers_to_drop + 1):
     
     print(f"--- Iteration {i} Complete ---")
     print(f"Layers: {current_layer_count} -> Eval Loss: {current_eval_loss:.4f} (Best so far: {lowest_eval_loss:.4f})")
+    results_log.append({'layers_remaining': current_layer_count, 'eval_loss': current_eval_loss})
     
-    # --- CORRECTED: Early Stopping Logic ---
+    # Check for the best model but DO NOT stop the loop
     if current_eval_loss < lowest_eval_loss:
         lowest_eval_loss = current_eval_loss
-        best_model_checkpoint_path = trainer.state.best_model_checkpoint # The path to the best model of this run
-        best_model_layer_count = current_layer_count
-        print(f"New best loss found! Storing checkpoint: {best_model_checkpoint_path}")
+        print(f"New best loss found! Saving this model state.")
+        # Save the best model state to a specific directory
+        best_model_path = f"{base_output_dir}/best_model_at_{current_layer_count}_layers"
+        trainer.save_model(best_model_path)
     else:
-        print(f"Eval loss of {current_eval_loss:.4f} is higher than the best loss of {lowest_eval_loss:.4f}. Stopping.")
-        # break
+        print(f"Eval loss of {current_eval_loss:.4f} is higher than the best loss of {lowest_eval_loss:.4f}, but continuing the run.")
 
-    # --- CORRECTED: Pruning and Weight Inheritance Logic ---
+    # --- CORRECTED & SIMPLIFIED: Pruning and Weight Inheritance Logic ---
     if i < max_layers_to_drop:
-        # Load the best model from the completed run to prepare for the next iteration.
-        print(f"\nLoading best model from {best_model_checkpoint_path} for next iteration...")
-        current_model = AutoModelForCausalLM.from_pretrained(best_model_checkpoint_path, torch_dtype=torch.bfloat16)
+        # The trainer holds the fully trained model in memory. No need to reload from disk.
+        current_model = trainer.model 
         
-        # Identify the next layer to drop based on the original ranking.
         original_index_to_drop = layers_to_drop_in_order[i]
         
-        # Find the *current* position of that layer.
-        # This is robust to previous drops.
         try:
             current_index_to_drop = layer_index_map.index(original_index_to_drop)
         except ValueError:
-            print(f"Error: Could not find original layer index {original_index_to_drop} in current map. Skipping drop.")
-            continue
+            print(f"Error: Could not find original layer index {original_index_to_drop}. Halting.")
+            break
 
-        print(f"Pruning next layer: Original Index {original_index_to_drop} (Current Position: {current_index_to_drop})")
+        print(f"\nPruning next layer for next iteration: Original Index {original_index_to_drop} (Current Position: {current_index_to_drop})")
 
-        # Prune the layer directly from the current model
         current_model.model.layers = torch.nn.ModuleList([
             layer for idx, layer in enumerate(current_model.model.layers) if idx != current_index_to_drop
         ])
         
-        # Update the model's configuration and our index map
         current_model.config.num_hidden_layers = len(current_model.model.layers)
+        
+        for new_idx, layer in enumerate(current_model.model.layers):
+            layer.self_attn.layer_idx = new_idx
+        
         layer_index_map.pop(current_index_to_drop)
 
-# --- 6. SAVE THE BEST PERFORMING MODEL ---
-if best_model_checkpoint_path:
-    final_model_path = f"{base_output_dir}/final_best_model_{best_model_layer_count}_layers"
-    print(f"\nSuccessive pruning finished. The best model had {best_model_layer_count} layers with a loss of {lowest_eval_loss:.4f}.")
-    print(f"Copying best model from {best_model_checkpoint_path} to {final_model_path}")
-    
-    shutil.copytree(best_model_checkpoint_path, final_model_path, dirs_exist_ok=True)
-    
-    print("Best model saved successfully!")
-else:
-    print("\nNo training was successfully completed.")
+# --- 6. LOG FINAL RESULTS ---
+print("\n" + "="*60)
+print("SUCCESSIVE PRUNING COMPLETE")
+print("="*60)
+print("Performance log:")
+for result in results_log:
+    print(f"  - Layers: {result['layers_remaining']}, Eval Loss: {result['eval_loss']:.4f}")
 
+print(f"\nThe best performing model was saved at: {base_output_dir}/best_model_at_...")
 print("Phase 2 (Successive Dropping) is complete!")

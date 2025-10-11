@@ -37,7 +37,7 @@ print("Hugging Face Token Loaded.")
 
 # ### CHANGE 1: Point to the fully fine-tuned model directory ###
 fully_tuned_model_path = "./results_sapling/pruned_4_layers/checkpoints/checkpoint-390"
-validation_data_path = "data/dev.json"
+validation_data_path = "data/final_combined_dev.json"
 # ### CHANGE 2: Set a new output file name for the results ###
 results_output_path = "evaluation_results_sapling_4_layers.json"
 
